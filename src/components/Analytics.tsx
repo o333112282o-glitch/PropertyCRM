@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Download, TrendingUp, TrendingDown, Target, DollarSign, Award, Filter, Hourglass,
   CheckCircle2, XCircle, Building2, MapPin, ChevronRight,
-  Filter as FilterIcon, PieChart, BarChart3, User,
+  Filter as FilterIcon, PieChart, BarChart3, Users,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth, useVisibleAgentIds } from '@/lib/auth';
@@ -98,7 +98,6 @@ export default function Analytics() {
 
   useDebouncedRealtimeLeads(fetchData);
 
-  // Apply all dynamic filters: source, agent, project
   const filteredLeads = useMemo(() => {
     let result = leads;
     if (sourceFilter !== 'all') result = result.filter((l) => l.lead_source === sourceFilter);
@@ -137,14 +136,33 @@ export default function Analytics() {
     return { total, won: won.length, lost: lost.length, active: active.length, totalToken, conversionRate, lossRate, avgDaysToWin, avgDaysToLoss, agedLeads };
   }, [filteredLeads]);
 
+  // 6-stage Conversion Funnel: Total -> Contacted -> Meetings -> Site Visits -> Tokens -> Won
   const funnel = useMemo(() => {
     const totalLeads = filteredLeads.length;
-    const meetings = activityLogs.filter(
-      (log) => log.action.toLowerCase().includes('meeting') || log.action.toLowerCase().includes('site visit')
-    );
-    const meetingLeadIds = new Set(meetings.map((m) => m.lead_id));
-    const meetingCount = filteredLeads.filter((l) => meetingLeadIds.has(l.id)).length;
 
+    // Contacted: any lead with a call_outcome set, or activity log with "call"
+    const contactedLeadIds = new Set<string>();
+    for (const l of filteredLeads) {
+      if (l.call_outcome) contactedLeadIds.add(l.id);
+    }
+    for (const log of activityLogs) {
+      if (log.action.toLowerCase().includes('call')) contactedLeadIds.add(log.lead_id);
+    }
+    const contactedCount = filteredLeads.filter((l) => contactedLeadIds.has(l.id)).length;
+
+    // Meetings: activity logs mentioning "meeting"
+    const meetingLogIds = new Set(
+      activityLogs.filter((log) => log.action.toLowerCase().includes('meeting')).map((m) => m.lead_id)
+    );
+    const meetingCount = filteredLeads.filter((l) => meetingLogIds.has(l.id)).length;
+
+    // Site Visits: activity logs mentioning "site visit"
+    const visitLogIds = new Set(
+      activityLogs.filter((log) => log.action.toLowerCase().includes('site visit')).map((m) => m.lead_id)
+    );
+    const visitCount = filteredLeads.filter((l) => visitLogIds.has(l.id)).length;
+
+    // Tokens: stage Token Received or Won, or has token_amount
     const tokenCount = filteredLeads.filter(
       (l) => l.stage === 'Token Received' || l.stage === 'Won' || (l.token_amount && l.token_amount > 0)
     ).length;
@@ -153,12 +171,15 @@ export default function Analytics() {
 
     return [
       { label: 'Total Leads', count: totalLeads, color: 'bg-sky-500', pct: 100 },
-      { label: 'Meetings / Site Visits', count: meetingCount, color: 'bg-violet-500', pct: totalLeads > 0 ? (meetingCount / totalLeads) * 100 : 0 },
-      { label: 'Token Received', count: tokenCount, color: 'bg-[#D4AF37]', pct: totalLeads > 0 ? (tokenCount / totalLeads) * 100 : 0 },
-      { label: 'Deals Won', count: wonCount, color: 'bg-emerald-500', pct: totalLeads > 0 ? (wonCount / totalLeads) * 100 : 0 },
+      { label: 'Contacted', count: contactedCount, color: 'bg-blue-500', pct: totalLeads > 0 ? (contactedCount / totalLeads) * 100 : 0 },
+      { label: 'Meetings', count: meetingCount, color: 'bg-violet-500', pct: totalLeads > 0 ? (meetingCount / totalLeads) * 100 : 0 },
+      { label: 'Site Visits', count: visitCount, color: 'bg-orange-500', pct: totalLeads > 0 ? (visitCount / totalLeads) * 100 : 0 },
+      { label: 'Tokens', count: tokenCount, color: 'bg-[#D4AF37]', pct: totalLeads > 0 ? (tokenCount / totalLeads) * 100 : 0 },
+      { label: 'Won Deals', count: wonCount, color: 'bg-emerald-500', pct: totalLeads > 0 ? (wonCount / totalLeads) * 100 : 0 },
     ];
   }, [filteredLeads, activityLogs]);
 
+  // Agent Performance Leaderboard: Agent Name, Assigned Leads, Calls Made, Meetings/Visits, Overdue FU, Revenue
   const agentPerformance = useMemo(() => {
     return users
       .filter((u) => u.role === 'agent' || u.role === 'manager')
@@ -166,8 +187,6 @@ export default function Analytics() {
         const agentLeads = filteredLeads.filter((l) => l.assigned_to === agent.id);
         const agentLeadIds = new Set(agentLeads.map((l) => l.id));
         const won = agentLeads.filter((l) => l.stage === 'Won').length;
-        const lost = agentLeads.filter((l) => l.stage === 'Lost').length;
-        const active = agentLeads.filter((l) => !['Won', 'Lost'].includes(l.stage)).length;
         const token = agentLeads
           .filter((l) => l.token_amount)
           .reduce((sum, l) => sum + (l.token_amount || 0), 0);
@@ -176,11 +195,14 @@ export default function Analytics() {
           (log) => agentLeadIds.has(log.lead_id) && log.action.toLowerCase().includes('call')
         ).length;
 
-        const followupsCompleted = agentLeads.filter(
-          (l) => l.next_followup_at && new Date(l.next_followup_at).getTime() < Date.now() && !['Won', 'Lost', 'Follow-up Date'].includes(l.stage)
+        // Meetings/Visits conducted
+        const meetingsVisits = activityLogs.filter(
+          (log) => agentLeadIds.has(log.lead_id) &&
+          (log.action.toLowerCase().includes('meeting') || log.action.toLowerCase().includes('site visit'))
         ).length;
 
-        const followupsMissed = agentLeads.filter((l) => {
+        // Overdue follow-ups
+        const overdueFollowups = agentLeads.filter((l) => {
           if (!l.next_followup_at || ['Won', 'Lost'].includes(l.stage)) return false;
           return new Date(l.next_followup_at).getTime() < Date.now();
         }).length;
@@ -188,15 +210,15 @@ export default function Analytics() {
         return {
           agent,
           total: agentLeads.length,
-          won, lost, active, token,
+          won, token,
           callsMade,
-          followupsCompleted,
-          followupsMissed,
+          meetingsVisits,
+          overdueFollowups,
           conversion: agentLeads.length > 0 ? ((won / agentLeads.length) * 100).toFixed(0) : '0',
         };
       })
       .filter((r) => r.total > 0)
-      .sort((a, b) => b.won - a.won);
+      .sort((a, b) => b.token - a.token || b.won - a.won);
   }, [filteredLeads, users, activityLogs]);
 
   const projectBreakdown = useMemo(() => {
@@ -228,9 +250,12 @@ export default function Analytics() {
     }).filter((s) => s.total > 0);
   }, [filteredLeads]);
 
+  // Lost Reason Breakdown cross-referenced with Lead Source
   const lostAnalysis = useMemo(() => {
     const lostLeads = filteredLeads.filter((l) => l.stage === 'Lost');
     const total = lostLeads.length;
+
+    // Primary reason breakdown
     const reasonMap = new Map<string, number>();
     for (const lead of lostLeads) {
       const reason = lead.lost_reason || 'Unspecified';
@@ -239,11 +264,20 @@ export default function Analytics() {
     const reasons = Array.from(reasonMap.entries())
       .map(([reason, count]) => ({ reason, count, pct: total > 0 ? (count / total) * 100 : 0 }))
       .sort((a, b) => b.count - a.count);
-    const lossBySource = LEAD_SOURCES.map((source) => ({
-      source,
-      count: lostLeads.filter((l) => l.lead_source === source).length,
-    })).filter((s) => s.count > 0);
-    return { total, reasons, lossBySource };
+
+    // Cross-reference: for each reason, breakdown by source
+    const reasonBySource = reasons.map(({ reason, count }) => {
+      const reasonLeads = reason === 'Unspecified'
+        ? lostLeads.filter((l) => !l.lost_reason)
+        : lostLeads.filter((l) => l.lost_reason === reason);
+      const sourceBreakdownArr = LEAD_SOURCES.map((source) => ({
+        source,
+        count: reasonLeads.filter((l) => l.lead_source === source).length,
+      })).filter((s) => s.count > 0);
+      return { reason, count, sourceBreakdown: sourceBreakdownArr };
+    });
+
+    return { total, reasons, reasonBySource };
   }, [filteredLeads]);
 
   const exportCSV = () => {
@@ -286,7 +320,7 @@ export default function Analytics() {
       {/* Header + Date filter */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-[#0F172A]">Analytics</h1>
+          <h1 className="text-2xl font-bold text-[#0F172A]">Analytics &amp; Reports</h1>
           <p className="text-slate-500 mt-0.5 text-sm">Sales performance insights</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -308,10 +342,9 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* Dynamic filters: Agent, Project, Source */}
+      {/* Global Filter Bar: Agent, Project, Source */}
       <div className="flex items-center gap-2 flex-wrap">
         <Filter size={16} className="text-slate-400 flex-shrink-0" />
-        {/* Agent filter */}
         {!isAgent && (
           <select
             value={agentFilter}
@@ -324,7 +357,6 @@ export default function Analytics() {
             ))}
           </select>
         )}
-        {/* Project filter */}
         {projects.length > 0 && (
           <select
             value={projectFilter}
@@ -337,7 +369,6 @@ export default function Analytics() {
             ))}
           </select>
         )}
-        {/* Source filter pills */}
         <FilterPill label="All Sources" active={sourceFilter === 'all'} onClick={() => setSourceFilter('all')} />
         {LEAD_SOURCES.map((source) => (
           <FilterPill key={source} label={source} active={sourceFilter === source} onClick={() => setSourceFilter(source)} />
@@ -359,16 +390,16 @@ export default function Analytics() {
         <MetricCard label="Aged Leads (>15d)" value={metrics.agedLeads.toString()} icon={Hourglass} color="bg-red-500" sub={metrics.agedLeads > 0 ? 'Needs attention' : 'All fresh'} />
       </div>
 
-      {/* Conversion Funnel */}
+      {/* Conversion Funnel — 6 stages */}
       <div className="glass-card p-5 lg:p-6">
         <div className="flex items-center gap-2 mb-5">
           <FilterIcon size={20} className="text-[#D4AF37]" />
           <h2 className="text-lg font-bold text-[#0F172A]">Conversion Funnel</h2>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {funnel.map((stage, i) => (
             <div key={stage.label}>
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-400 w-5">{i + 1}</span>
                   <span className="text-sm font-medium text-slate-600">{stage.label}</span>
@@ -378,17 +409,17 @@ export default function Analytics() {
                   <span className="text-xs text-slate-400">({stage.pct.toFixed(0)}%)</span>
                 </div>
               </div>
-              <div className="h-8 bg-slate-100 rounded-lg overflow-hidden">
+              <div className="h-7 bg-slate-100 rounded-lg overflow-hidden">
                 <div
-                  className={`h-full ${stage.color} transition-all duration-700 flex items-center justify-end pr-3`}
-                  style={{ width: `${Math.max(stage.pct, stage.count > 0 ? 5 : 0)}%` }}
+                  className={`h-full ${stage.color} transition-all duration-700 flex items-center justify-end pr-2.5`}
+                  style={{ width: `${Math.max(stage.pct, stage.count > 0 ? 4 : 0)}%` }}
                 >
                   {stage.count > 0 && <span className="text-[10px] font-bold text-white">{stage.pct.toFixed(0)}%</span>}
                 </div>
               </div>
               {i < funnel.length - 1 && (
                 <div className="flex justify-center py-0.5">
-                  <ChevronRight size={12} className="text-slate-300 rotate-90" />
+                  <ChevronRight size={11} className="text-slate-300 rotate-90" />
                 </div>
               )}
             </div>
@@ -487,11 +518,11 @@ export default function Analytics() {
         </div>
       )}
 
-      {/* Agent Performance Matrix */}
+      {/* Agent Performance Leaderboard */}
       <div className="glass-card p-5 lg:p-6">
         <div className="flex items-center gap-2 mb-5">
           <Award size={20} className="text-[#D4AF37]" />
-          <h2 className="text-lg font-bold text-[#0F172A]">Sales Agent Performance Matrix</h2>
+          <h2 className="text-lg font-bold text-[#0F172A]">Agent Performance Leaderboard</h2>
         </div>
 
         {/* Mobile: card layout */}
@@ -512,13 +543,27 @@ export default function Analytics() {
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
+                <Stat label="Assigned" value={row.total.toString()} />
                 <Stat label="Calls" value={row.callsMade.toString()} color="text-blue-600" />
+                <Stat label="Mtgs/Visits" value={row.meetingsVisits.toString()} color="text-violet-600" />
                 <Stat label="Won" value={row.won.toString()} color="text-emerald-600" />
                 <Stat label="Conv." value={`${row.conversion}%`} color="text-[#a67c00]" />
-                <Stat label="FU Done" value={row.followupsCompleted.toString()} color="text-emerald-600" />
-                <Stat label="FU Missed" value={row.followupsMissed.toString()} color={row.followupsMissed > 0 ? 'text-red-600' : 'text-slate-400'} />
-                <Stat label="Total" value={row.total.toString()} />
+                <div>
+                  {row.overdueFollowups > 0 ? (
+                    <span className="inline-block text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
+                      {row.overdueFollowups} overdue
+                    </span>
+                  ) : (
+                    <Stat label="Overdue" value="0" color="text-slate-400" />
+                  )}
+                </div>
               </div>
+              {row.token > 0 && (
+                <div className="mt-2 pt-2 border-t border-slate-100 text-center">
+                  <p className="text-sm font-bold text-[#a67c00]">{formatCurrency(row.token)}</p>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider">Token Revenue</p>
+                </div>
+              )}
             </div>
           ))}
           {agentPerformance.length === 0 && (
@@ -526,21 +571,20 @@ export default function Analytics() {
           )}
         </div>
 
-        {/* Desktop: table */}
+        {/* Desktop: leaderboard table */}
         <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs text-slate-400 uppercase tracking-wider">
                 <th className="pb-3 pr-4 font-semibold">#</th>
-                <th className="pb-3 pr-4 font-semibold">Agent</th>
-                <th className="pb-3 pr-4 font-semibold text-center">Total</th>
-                <th className="pb-3 pr-4 font-semibold text-center">Calls</th>
-                <th className="pb-3 pr-4 font-semibold text-center">FU Done</th>
-                <th className="pb-3 pr-4 font-semibold text-center">FU Missed</th>
+                <th className="pb-3 pr-4 font-semibold">Agent Name</th>
+                <th className="pb-3 pr-4 font-semibold text-center">Assigned</th>
+                <th className="pb-3 pr-4 font-semibold text-center">Calls Made</th>
+                <th className="pb-3 pr-4 font-semibold text-center">Mtgs/Visits</th>
+                <th className="pb-3 pr-4 font-semibold text-center">Overdue</th>
                 <th className="pb-3 pr-4 font-semibold text-center">Won</th>
-                <th className="pb-3 pr-4 font-semibold text-center">Lost</th>
                 <th className="pb-3 pr-4 font-semibold text-center">Conv.</th>
-                <th className="pb-3 font-semibold text-right">Token</th>
+                <th className="pb-3 font-semibold text-right">Token Revenue</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -565,14 +609,17 @@ export default function Analytics() {
                   </td>
                   <td className="py-3 pr-4 text-center font-medium text-slate-600">{row.total}</td>
                   <td className="py-3 pr-4 text-center font-medium text-blue-600">{row.callsMade}</td>
-                  <td className="py-3 pr-4 text-center font-medium text-emerald-600">{row.followupsCompleted}</td>
-                  <td className="py-3 pr-4 text-center font-medium">
-                    <span className={row.followupsMissed > 0 ? 'text-red-600 font-bold' : 'text-slate-400'}>
-                      {row.followupsMissed}
-                    </span>
+                  <td className="py-3 pr-4 text-center font-medium text-violet-600">{row.meetingsVisits}</td>
+                  <td className="py-3 pr-4 text-center">
+                    {row.overdueFollowups > 0 ? (
+                      <span className="inline-flex items-center text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
+                        {row.overdueFollowups}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">0</span>
+                    )}
                   </td>
                   <td className="py-3 pr-4 text-center font-bold text-emerald-600">{row.won}</td>
-                  <td className="py-3 pr-4 text-center font-medium text-slate-400">{row.lost}</td>
                   <td className="py-3 pr-4 text-center font-semibold text-[#a67c00]">{row.conversion}%</td>
                   <td className="py-3 text-right font-semibold text-[#a67c00] whitespace-nowrap">
                     {row.token > 0 ? formatCurrency(row.token) : '—'}
@@ -584,57 +631,46 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* Lost Lead Analysis */}
+      {/* Lost Reason Breakdown with Source Cross-Reference */}
       {lostAnalysis.total > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-          <div className="glass-card p-5 lg:p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <XCircle size={20} className="text-red-500" />
-              <h2 className="text-lg font-bold text-[#0F172A]">Lost Lead Reasons</h2>
-              <span className="text-xs text-slate-400 ml-auto">{lostAnalysis.total} lost</span>
-            </div>
-            <div className="space-y-3">
-              {lostAnalysis.reasons.map(({ reason, count, pct }) => (
-                <div key={reason}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-sm font-medium text-slate-600">{reason}</span>
-                    <span className="text-xs text-slate-400">{count} ({pct.toFixed(0)}%)</span>
+        <div className="glass-card p-5 lg:p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <XCircle size={20} className="text-red-500" />
+            <h2 className="text-lg font-bold text-[#0F172A]">Lost Reason Breakdown by Source</h2>
+            <span className="text-xs text-slate-400 ml-auto">{lostAnalysis.total} lost leads</span>
+          </div>
+
+          {/* Combined reason + source bars */}
+          <div className="space-y-4">
+            {lostAnalysis.reasonBySource.map(({ reason, count, sourceBreakdown: srcBreakdown }) => {
+              const pct = lostAnalysis.total > 0 ? (count / lostAnalysis.total) * 100 : 0;
+              return (
+                <div key={reason} className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+                  {/* Reason header bar */}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-slate-700">{reason}</span>
+                    <span className="text-xs text-slate-400 font-medium">{count} leads · {pct.toFixed(0)}%</span>
                   </div>
-                  <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-3 bg-slate-100 rounded-full overflow-hidden mb-2">
                     <div
                       className="h-full bg-gradient-to-r from-red-500 to-rose-500 transition-all duration-500"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="glass-card p-5 lg:p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <BarChart3 size={20} className="text-red-500" />
-              <h2 className="text-lg font-bold text-[#0F172A]">Loss by Lead Source</h2>
-            </div>
-            <div className="space-y-3">
-              {lostAnalysis.lossBySource.map(({ source, count }) => {
-                const pct = lostAnalysis.total > 0 ? (count / lostAnalysis.total) * 100 : 0;
-                return (
-                  <div key={source}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-sm font-medium text-slate-600">{source}</span>
-                      <span className="text-xs text-slate-400">{count}</span>
-                    </div>
-                    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-red-400 transition-all duration-500"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
+                  {/* Source cross-reference chips */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {srcBreakdown.map((src) => (
+                      <span
+                        key={src.source}
+                        className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full"
+                      >
+                        {src.source}: <span className="font-bold text-slate-700">{src.count}</span>
+                      </span>
+                    ))}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

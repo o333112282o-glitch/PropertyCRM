@@ -18,6 +18,7 @@ import { formatCurrency, formatDateTime, timeAgo, telLink, whatsappLink } from '
 import Badge from '@/components/ui/Badge';
 import QuickEditDrawer from '@/components/QuickEditDrawer';
 import InboundCallModal from '@/components/InboundCallModal';
+import OutboundCallModal from '@/components/OutboundCallModal';
 import LogInteractionModal from '@/components/LogInteractionModal';
 import DateFilter from '@/components/ui/DateFilter';
 
@@ -35,6 +36,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [quickEditLead, setQuickEditLead] = useState<Lead | null>(null);
   const [showInbound, setShowInbound] = useState(false);
+  const [showOutbound, setShowOutbound] = useState(false);
   const [logLead, setLogLead] = useState<Lead | null>(null);
   const [interactionType, setInteractionType] = useState<InteractionType>('call');
 
@@ -264,6 +266,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           >
             <PhoneIncoming size={20} />
             <span className="hidden sm:inline">Inbound Call</span>
+          </button>
+          <button
+            onClick={() => setShowOutbound(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#c4a030] text-[#1E293B] font-semibold shadow-md transition active:scale-95"
+          >
+            <PhoneOutgoing size={20} />
+            <span className="hidden sm:inline">Outbound Call</span>
           </button>
         </div>
       </div>
@@ -764,6 +773,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         users={agents}
         onClose={() => setShowInbound(false)}
         onCreated={() => { setShowInbound(false); fetchData(); }}
+      />
+
+      {/* Outbound Call Modal */}
+      <OutboundCallModal
+        open={showOutbound}
+        onClose={() => setShowOutbound(false)}
+        onLogged={() => { setShowOutbound(false); fetchData(); }}
       />
 
       {/* Log Interaction Modal */}
