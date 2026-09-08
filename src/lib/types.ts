@@ -197,13 +197,13 @@ export function getPresetRange(preset: DatePreset): DateRange {
 }
 
 export const STAGE_COLORS: Record<LeadStage, { bg: string; text: string; border: string; dot: string }> = {
-  'New': { bg: 'bg-sky-500/15', text: 'text-sky-400', border: 'border-sky-500/30', dot: 'bg-sky-500' },
-  'Attempt': { bg: 'bg-orange-500/15', text: 'text-orange-400', border: 'border-orange-500/30', dot: 'bg-orange-500' },
-  'Follow-up Date': { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30', dot: 'bg-amber-500' },
-  'Negotiate': { bg: 'bg-violet-500/15', text: 'text-violet-400', border: 'border-violet-500/30', dot: 'bg-violet-500' },
-  'Token Received': { bg: 'bg-[#D4AF37]/15', text: 'text-[#D4AF37]', border: 'border-[#D4AF37]/30', dot: 'bg-[#D4AF37]' },
-  'Won': { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30', dot: 'bg-emerald-500' },
-  'Lost': { bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500/30', dot: 'bg-red-500' },
+  'New': { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200', dot: 'bg-sky-500' },
+  'Attempt': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
+  'Follow-up Date': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
+  'Negotiate': { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', dot: 'bg-violet-500' },
+  'Token Received': { bg: 'bg-[#D4AF37]/10', text: 'text-[#a67c00]', border: 'border-[#D4AF37]/30', dot: 'bg-[#D4AF37]' },
+  'Won': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
+  'Lost': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
 };
 
 export const CALL_OUTCOME_COLORS: Record<CallOutcome, string> = {

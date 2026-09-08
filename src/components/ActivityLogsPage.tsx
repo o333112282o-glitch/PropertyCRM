@@ -225,7 +225,7 @@ export default function ActivityLogsPage() {
               <div key={stat.member.id} className="bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md transition">
                 <div className="flex items-center gap-3">
                   <div className="relative flex-shrink-0">
-                    <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center text-sm font-bold">
+                    <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/10 text-[#a67c00] flex items-center justify-center text-sm font-bold">
                       {stat.member.full_name?.[0] || stat.member.username[0].toUpperCase()}
                     </div>
                     <span
@@ -234,7 +234,7 @@ export default function ActivityLogsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-gray-900 truncate">{stat.member.full_name || stat.member.username}</h3>
+                      <h3 className="font-bold text-slate-700 truncate">{stat.member.full_name || stat.member.username}</h3>
                       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                         stat.presence === 'online' ? 'bg-emerald-50 text-emerald-600' :
                         stat.presence === 'idle' ? 'bg-amber-50 text-amber-600' :
@@ -324,10 +324,10 @@ export default function ActivityLogsPage() {
                     <tr key={s.id} className="hover:bg-slate-50 transition">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center text-xs font-bold flex-shrink-0">
+                          <div className="w-7 h-7 rounded-lg bg-[#D4AF37]/10 text-[#a67c00] flex items-center justify-center text-xs font-bold flex-shrink-0">
                             {userName(s.user_id)[0] || '?'}
                           </div>
-                          <span className="text-sm font-semibold text-gray-900">{userName(s.user_id)}</span>
+                          <span className="text-sm font-bold text-slate-700">{userName(s.user_id)}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(s.login_at)}</td>
@@ -361,10 +361,10 @@ export default function ActivityLogsPage() {
               return (
                 <div key={s.id} className="p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center text-xs font-bold flex-shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/10 text-[#a67c00] flex items-center justify-center text-xs font-bold flex-shrink-0">
                       {userName(s.user_id)[0] || '?'}
                     </div>
-                    <span className="text-sm font-semibold text-gray-900">{userName(s.user_id)}</span>
+                    <span className="text-sm font-bold text-slate-700">{userName(s.user_id)}</span>
                     {!s.logout_at && (
                       <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">Active</span>
                     )}

@@ -29,7 +29,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-[#0B1120]">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#F8FAFC]">
       {/* Left brand panel */}
       <div className="lg:w-1/2 bg-gradient-to-br from-[#1E293B] via-[#334155] to-[#1E293B] text-white p-8 lg:p-12 flex flex-col justify-between min-h-[40vh] lg:min-h-screen relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#D4AF37]/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3" />
@@ -82,27 +82,27 @@ export default function Login() {
               <GoldBuildingIcon size={24} />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Property Fy</h1>
-              <p className="text-xs text-slate-400">Real Estate CRM</p>
+              <h1 className="text-xl font-bold text-[#0F172A]">Property Fy</h1>
+              <p className="text-xs text-slate-500">Real Estate CRM</p>
             </div>
           </div>
 
-          <h2 className="text-2xl font-bold text-white mb-1">Welcome back</h2>
-          <p className="text-slate-400 mb-8">Sign in to your account to continue</p>
+          <h2 className="text-2xl font-bold text-[#0F172A] mb-1">Welcome back</h2>
+          <p className="text-slate-500 mb-8">Sign in to your account to continue</p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-1.5">
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                 Username
               </label>
               <div className="relative">
-                <UserIcon size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <UserIcon size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter your username"
-                  className="w-full pl-11 pr-4 py-3 rounded-xl surface-dark text-slate-200 placeholder-slate-500 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition"
+                  className="w-full pl-11 pr-4 py-3 rounded-xl surface-dark text-slate-900 placeholder-slate-400 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition"
                   required
                   autoFocus
                 />
@@ -110,23 +110,23 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-1.5">
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                 Password
               </label>
               <div className="relative">
-                <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="w-full pl-11 pr-12 py-3 rounded-xl surface-dark text-slate-200 placeholder-slate-500 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition"
+                  className="w-full pl-11 pr-12 py-3 rounded-xl surface-dark text-slate-900 placeholder-slate-400 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((s) => !s)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>

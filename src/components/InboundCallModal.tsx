@@ -106,7 +106,7 @@ export default function InboundCallModal({ open, users, onClose, onCreated }: In
                     onClose();
                   }}
                 >
-                  <div className="w-9 h-9 rounded-xl bg-[#1E293B] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
                     {lead.client_name[0]}
                   </div>
                   <div className="flex-1 min-w-0">

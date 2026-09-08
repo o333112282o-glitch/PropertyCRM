@@ -99,7 +99,7 @@ export default function ProjectsManagement() {
           projects.map((p) => (
             <div key={p.id} className="bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md transition">
               <div className="flex items-start gap-3">
-                <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/15 text-[#a67c00] flex items-center justify-center flex-shrink-0">
+                <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/10 text-[#a67c00] flex items-center justify-center flex-shrink-0">
                   <FolderOpen size={22} />
                 </div>
                 <div className="flex-1 min-w-0">

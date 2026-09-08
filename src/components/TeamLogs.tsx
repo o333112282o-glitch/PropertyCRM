@@ -143,11 +143,11 @@ export default function TeamLogs({ users }: TeamLogsProps) {
                 <tr key={stat.user.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/10 text-[#a67c00] flex items-center justify-center text-xs font-bold flex-shrink-0">
                         {stat.user.full_name?.[0] || stat.user.username[0].toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{stat.user.full_name || stat.user.username}</p>
+                        <p className="text-sm font-bold text-slate-700 truncate">{stat.user.full_name || stat.user.username}</p>
                         <p className="text-[10px] text-gray-400 capitalize">{stat.user.role}</p>
                       </div>
                     </div>

@@ -228,7 +228,7 @@ export default function UserManagement() {
                   <div className="flex items-center gap-3">
                     <div className="relative flex-shrink-0">
                       <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm ${
-                        u.role === 'super_admin' ? 'bg-[#D4AF37]/15 text-[#a67c00]' :
+                        u.role === 'super_admin' ? 'bg-[#D4AF37]/10 text-[#a67c00]' :
                         u.role === 'manager' ? 'bg-orange-50 text-orange-600' :
                         u.role === 'dealer' ? 'bg-slate-100 text-slate-600' :
                         u.role === 'dealer_manager' ? 'bg-purple-50 text-purple-600' :
@@ -247,7 +247,7 @@ export default function UserManagement() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold text-gray-900 truncate">
+                        <h3 className="font-bold text-slate-700 truncate">
                           {u.full_name || u.username}
                         </h3>
                         {isSelf && (

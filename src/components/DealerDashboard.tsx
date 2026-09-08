@@ -181,7 +181,7 @@ export default function DealerDashboard({ mode, deepLinkLeadId, onDeepLinkConsum
               }`}
             >
               <div className="flex items-start gap-3">
-                <div className="w-11 h-11 rounded-xl bg-[#1E293B] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                <div className="w-11 h-11 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
                   {lead.client_name[0]}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -204,7 +204,7 @@ export default function DealerDashboard({ mode, deepLinkLeadId, onDeepLinkConsum
                   {/* Assigned agent name (read-only, no internal activity logs) */}
                   <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-600">
                     <UserCircle size={12} className="text-gray-400" />
-                    <span className="font-medium">Agent: {agentName(lead.assigned_to)}</span>
+                    <span className="font-bold text-slate-700">Agent: {agentName(lead.assigned_to)}</span>
                   </div>
                 </div>
                 <Badge className={`${STAGE_COLORS[lead.stage as LeadStage]?.bg || ''} ${STAGE_COLORS[lead.stage as LeadStage]?.text || ''} ${STAGE_COLORS[lead.stage as LeadStage]?.border || ''} border`}>

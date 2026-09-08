@@ -183,7 +183,7 @@ export default function LeadCreatorDashboard({ mode }: LeadCreatorDashboardProps
             return (
               <div key={lead.id} className="bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md transition">
                 <div className="flex items-start gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-[#1E293B] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
                     {lead.client_name[0]}
                   </div>
                   <div className="flex-1 min-w-0">

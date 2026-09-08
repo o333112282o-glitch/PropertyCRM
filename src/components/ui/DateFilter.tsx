@@ -31,17 +31,17 @@ export default function DateFilter({ preset, range, onPresetChange, onCustomRang
       <div className="relative">
         <button
           onClick={() => setOpen(!open)}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl surface-dark text-slate-200 text-sm font-medium hover:bg-white/5 transition"
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl surface-dark text-slate-700 text-sm font-medium hover:bg-slate-50 transition"
         >
           <Calendar size={16} className="text-slate-400" />
           <span>{currentLabel}</span>
           <ChevronDown size={14} className={`text-slate-400 transition ${open ? 'rotate-180' : ''}`} />
         </button>
         {open && (
-          <div className="absolute top-full mt-1 left-0 z-30 bg-[#1E293B] rounded-xl border border-white/10 shadow-2xl py-1.5 min-w-[180px]">
+          <div className="absolute top-full mt-1 left-0 z-30 bg-white rounded-xl border border-slate-200 shadow-2xl py-1.5 min-w-[180px]">
             <button
               onClick={() => { onPresetChange('all'); setOpen(false); }}
-              className="w-full text-left px-3.5 py-2 text-sm text-slate-300 hover:bg-white/5 transition"
+              className="w-full text-left px-3.5 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
             >
               All Time
             </button>
@@ -50,7 +50,7 @@ export default function DateFilter({ preset, range, onPresetChange, onCustomRang
                 key={p.value}
                 onClick={() => { onPresetChange(p.value); setOpen(false); }}
                 className={`w-full text-left px-3.5 py-2 text-sm transition ${
-                  preset === p.value ? 'bg-[#D4AF37]/15 text-[#D4AF37] font-medium' : 'text-slate-300 hover:bg-white/5'
+                  preset === p.value ? 'bg-[#D4AF37]/10 text-[#a67c00] font-medium' : 'text-slate-700 hover:bg-slate-50'
                 }`}
               >
                 {p.label}
@@ -69,7 +69,7 @@ export default function DateFilter({ preset, range, onPresetChange, onCustomRang
               start.setHours(0, 0, 0, 0);
               onCustomRangeChange({ start, end: range?.end || new Date() });
             }}
-            className="px-2.5 py-2 rounded-lg surface-dark text-slate-200 text-sm focus:border-[#D4AF37] outline-none transition [color-scheme:dark]"
+            className="px-2.5 py-2 rounded-lg surface-dark text-slate-700 text-sm focus:border-[#D4AF37] outline-none transition"
           />
           <span className="text-slate-400 text-sm">to</span>
           <input
@@ -80,7 +80,7 @@ export default function DateFilter({ preset, range, onPresetChange, onCustomRang
               end.setHours(23, 59, 59, 999);
               onCustomRangeChange({ start: range?.start || new Date(0), end });
             }}
-            className="px-2.5 py-2 rounded-lg surface-dark text-slate-200 text-sm focus:border-[#D4AF37] outline-none transition [color-scheme:dark]"
+            className="px-2.5 py-2 rounded-lg surface-dark text-slate-700 text-sm focus:border-[#D4AF37] outline-none transition"
           />
         </div>
       )}

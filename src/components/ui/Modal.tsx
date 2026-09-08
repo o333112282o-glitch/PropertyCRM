@@ -26,16 +26,16 @@ export default function Modal({ open, onClose, title, subtitle, children, size =
         onClick={onClose}
       />
       <div
-        className={`relative w-full ${sizeClass} bg-[#1E293B] border border-white/10 rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col animate-[slideUp_.2s_ease-out]`}
+        className={`relative w-full ${sizeClass} bg-white border border-slate-200 rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col animate-[slideUp_.2s_ease-out]`}
       >
-        <div className="flex items-start justify-between px-5 py-4 border-b border-white/10 flex-shrink-0">
+        <div className="flex items-start justify-between px-5 py-4 border-b border-slate-200 flex-shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-white">{title}</h2>
-            {subtitle && <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>}
+            <h2 className="text-lg font-bold text-[#0F172A]">{title}</h2>
+            {subtitle && <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition"
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition"
           >
             <X size={20} />
           </button>

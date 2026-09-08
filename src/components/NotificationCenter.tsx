@@ -4,10 +4,10 @@ import { useNotifications, AppNotification } from '@/lib/useNotifications';
 import { timeAgo } from '@/lib/utils';
 
 const NOTIF_ICONS: Record<AppNotification['type'], { icon: typeof Clock; color: string; bg: string }> = {
-  follow_up: { icon: Clock, color: 'text-orange-400', bg: 'bg-orange-500/15' },
-  lead_assigned: { icon: UserPlus, color: 'text-sky-400', bg: 'bg-sky-500/15' },
-  overdue: { icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/15' },
-  site_visit: { icon: Calendar, color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
+  follow_up: { icon: Clock, color: 'text-orange-600', bg: 'bg-orange-50' },
+  lead_assigned: { icon: UserPlus, color: 'text-sky-600', bg: 'bg-sky-50' },
+  overdue: { icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
+  site_visit: { icon: Calendar, color: 'text-emerald-600', bg: 'bg-emerald-50' },
 };
 
 interface NotificationCenterProps {
@@ -42,23 +42,23 @@ export default function NotificationCenter({ onLeadClick }: NotificationCenterPr
     <div className="relative" ref={panelRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative p-2 rounded-xl hover:bg-white/10 transition text-white/80 hover:text-white"
+        className="relative p-2 rounded-xl hover:bg-slate-100 transition text-slate-600 hover:text-slate-900"
         title="Notifications"
       >
         <BellIcon size={20} className={unreadCount > 0 ? 'animate-[wiggle_.5s_ease-in-out]' : ''} />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-[#F97316] text-white text-[10px] font-bold border-2 border-[#1E293B]">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-[#F97316] text-white text-[10px] font-bold border-2 border-white">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-[#1E293B]/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 z-50 animate-[fadeIn_.15s_ease-out] overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200 z-50 animate-[fadeIn_.15s_ease-out] overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-white">Notifications</h3>
+              <h3 className="text-sm font-bold text-[#0F172A]">Notifications</h3>
               {unreadCount > 0 && (
                 <span className="text-[10px] font-bold text-white bg-[#F97316] px-1.5 py-0.5 rounded-full">
                   {unreadCount} new
@@ -75,7 +75,7 @@ export default function NotificationCenter({ onLeadClick }: NotificationCenterPr
                   Mark all read
                 </button>
               )}
-              <button onClick={() => setOpen(false)} className="p-1 rounded-lg hover:bg-white/10 text-slate-400">
+              <button onClick={() => setOpen(false)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-500">
                 <X size={16} />
               </button>
             </div>
@@ -83,16 +83,16 @@ export default function NotificationCenter({ onLeadClick }: NotificationCenterPr
 
           {/* Permission banner */}
           {permission !== 'granted' && 'Notification' in window && (
-            <div className="px-4 py-3 bg-amber-500/10 border-b border-amber-500/20">
+            <div className="px-4 py-3 bg-amber-50 border-b border-amber-200">
               <div className="flex items-start gap-2">
-                <BellOff size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                <BellOff size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-xs text-amber-300 font-medium">Enable push notifications</p>
-                  <p className="text-[11px] text-amber-400/70 mt-0.5">Get alerts for follow-ups and new leads</p>
+                  <p className="text-xs text-amber-800 font-medium">Enable push notifications</p>
+                  <p className="text-[11px] text-amber-700 mt-0.5">Get alerts for follow-ups and new leads</p>
                 </div>
                 <button
                   onClick={requestPermission}
-                  className="text-xs font-bold text-amber-200 bg-amber-500/20 hover:bg-amber-500/30 px-2 py-1 rounded-lg transition"
+                  className="text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-2 py-1 rounded-lg transition"
                 >
                   Enable
                 </button>
@@ -104,12 +104,12 @@ export default function NotificationCenter({ onLeadClick }: NotificationCenterPr
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="text-center py-10">
-                <Bell size={28} className="mx-auto text-slate-600 mb-2" />
+                <Bell size={28} className="mx-auto text-slate-300 mb-2" />
                 <p className="text-sm text-slate-500">No notifications</p>
-                <p className="text-xs text-slate-600 mt-0.5">You're all caught up</p>
+                <p className="text-xs text-slate-400 mt-0.5">You're all caught up</p>
               </div>
             ) : (
-              <div className="divide-y divide-white/5">
+              <div className="divide-y divide-slate-100">
                 {notifications.map((notif) => {
                   const config = NOTIF_ICONS[notif.type];
                   const Icon = config.icon;
@@ -119,16 +119,16 @@ export default function NotificationCenter({ onLeadClick }: NotificationCenterPr
                       key={notif.id}
                       onClick={() => clickable && handleNotifClick(notif)}
                       className={`flex items-start gap-3 px-4 py-3 transition ${
-                        clickable ? 'cursor-pointer hover:bg-white/5' : ''
-                      } ${!notif.read ? 'bg-[#F97316]/[0.05]' : ''}`}
+                        clickable ? 'cursor-pointer hover:bg-slate-50' : ''
+                      } ${!notif.read ? 'bg-orange-50' : ''}`}
                     >
                       <div className={`w-8 h-8 rounded-lg ${config.bg} ${config.color} flex items-center justify-center flex-shrink-0`}>
                         <Icon size={16} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white">{notif.title}</p>
-                        <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{notif.body}</p>
-                        <p className="text-[10px] text-slate-600 mt-1">{timeAgo(new Date(notif.createdAt).toISOString())}</p>
+                        <p className="text-sm font-semibold text-[#0F172A]">{notif.title}</p>
+                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{notif.body}</p>
+                        <p className="text-[10px] text-slate-400 mt-1">{timeAgo(new Date(notif.createdAt).toISOString())}</p>
                       </div>
                       {!notif.read && (
                         <span className="w-2 h-2 rounded-full bg-[#F97316] flex-shrink-0 mt-1.5" />

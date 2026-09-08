@@ -25,14 +25,14 @@ function actionIcon(action: string): typeof Phone {
 
 function actionColor(action: string): string {
   const lower = action.toLowerCase();
-  if (lower.includes('call')) return 'bg-blue-500/15 text-blue-400';
-  if (lower.includes('whatsapp')) return 'bg-green-500/15 text-green-400';
-  if (lower.includes('created') || lower.includes('add')) return 'bg-sky-500/15 text-sky-400';
-  if (lower.includes('reassign') || lower.includes('stage')) return 'bg-violet-500/15 text-violet-400';
-  if (lower.includes('delete')) return 'bg-red-500/15 text-red-400';
-  if (lower.includes('won') || lower.includes('closed')) return 'bg-emerald-500/15 text-emerald-400';
-  if (lower.includes('site visit')) return 'bg-emerald-500/15 text-emerald-400';
-  return 'bg-slate-500/15 text-slate-400';
+  if (lower.includes('call')) return 'bg-blue-50 text-blue-600';
+  if (lower.includes('whatsapp')) return 'bg-green-50 text-green-600';
+  if (lower.includes('created') || lower.includes('add')) return 'bg-sky-50 text-sky-600';
+  if (lower.includes('reassign') || lower.includes('stage')) return 'bg-violet-50 text-violet-600';
+  if (lower.includes('delete')) return 'bg-red-50 text-red-600';
+  if (lower.includes('won') || lower.includes('closed')) return 'bg-emerald-50 text-emerald-600';
+  if (lower.includes('site visit')) return 'bg-emerald-50 text-emerald-600';
+  return 'bg-slate-100 text-slate-600';
 }
 
 export default function ActivityTimeline({ leadId, users, refreshKey }: ActivityTimelineProps) {
@@ -84,8 +84,8 @@ export default function ActivityTimeline({ leadId, users, refreshKey }: Activity
 
   if (logs.length === 0) {
     return (
-      <div className="text-center py-6 text-slate-500">
-        <History size={28} className="mx-auto mb-2 text-slate-600" />
+      <div className="text-center py-6 text-slate-400">
+        <History size={28} className="mx-auto mb-2 text-slate-300" />
         <p className="text-sm">No activity recorded yet</p>
       </div>
     );
@@ -108,7 +108,7 @@ export default function ActivityTimeline({ leadId, users, refreshKey }: Activity
                 <Icon size={14} />
               </div>
               {idx < logs.length - 1 && (
-                <div className="w-0.5 flex-1 bg-white/10 my-1" />
+                <div className="w-0.5 flex-1 bg-slate-200 my-1" />
               )}
             </div>
 
@@ -117,12 +117,12 @@ export default function ActivityTimeline({ leadId, users, refreshKey }: Activity
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-white">{log.action}</span>
+                    <span className="text-sm font-semibold text-[#0F172A]">{log.action}</span>
                     {showBadge && (
                       <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded border ${
                         isCall
-                          ? 'bg-blue-500/15 text-blue-400 border-blue-500/20'
-                          : 'bg-green-500/15 text-green-400 border-green-500/20'
+                          ? 'bg-blue-50 text-blue-600 border-blue-200'
+                          : 'bg-green-50 text-green-600 border-green-200'
                       }`}>
                         {isCall ? <Phone size={9} /> : <MessageCircle size={9} />}
                         {log.action}
@@ -130,12 +130,12 @@ export default function ActivityTimeline({ leadId, users, refreshKey }: Activity
                     )}
                   </div>
                   {log.detail && (
-                    <p className="text-sm text-slate-400 mt-0.5 break-words">{log.detail}</p>
+                    <p className="text-sm text-slate-600 mt-0.5 break-words">{log.detail}</p>
                   )}
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-slate-500">{formatDateTime(log.created_at)}</span>
-                    <span className="text-xs text-slate-600">·</span>
-                    <span className="text-xs text-slate-400 font-medium">{userName(log.user_id)}</span>
+                    <span className="text-xs text-slate-400">{formatDateTime(log.created_at)}</span>
+                    <span className="text-xs text-slate-300">·</span>
+                    <span className="text-xs text-slate-600 font-medium">{userName(log.user_id)}</span>
                   </div>
                 </div>
               </div>
