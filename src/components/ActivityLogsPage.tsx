@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAuth, useVisibleAgentIds } from '@/lib/auth';
+import { useAuth, useVisibleAgentIds, fetchManagedAgentIds } from '@/lib/auth';
 import { useDebouncedRealtimeLeads } from '@/lib/useRealtime';
 import {
   User,
@@ -32,7 +32,7 @@ type Tab = 'presence' | 'sessions' | 'activity';
 type ActivityTypeFilter = 'all' | 'calls' | 'whatsapp' | 'updates';
 
 export default function ActivityLogsPage() {
-  const { isManager } = useAuth();
+  const { isManager, isSuperAdmin } = useAuth();
   const getVisibleAgentIds = useVisibleAgentIds();
   const [users, setUsers] = useState<User[]>([]);
   const [sessions, setSessions] = useState<SessionLog[]>([]);
@@ -44,6 +44,8 @@ export default function ActivityLogsPage() {
   const [datePreset, setDatePreset] = useState<DatePreset>('today');
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
   const [agentFilter, setAgentFilter] = useState<string>('all');
+  const [managerFilter, setManagerFilter] = useState<string>('all');
+  const [managerTeamIds, setManagerTeamIds] = useState<string[] | null>(null);
   const [activityTypeFilter, setActivityTypeFilter] = useState<ActivityTypeFilter>('all');
 
   const currentRange = useMemo((): DateRange => {
@@ -103,11 +105,26 @@ export default function ActivityLogsPage() {
     [users]
   );
 
+  const managers = useMemo(() => users.filter((u) => u.role === 'manager'), [users]);
+
+  const handleManagerFilterChange = useCallback(async (managerId: string) => {
+    setManagerFilter(managerId);
+    setAgentFilter('all');
+    if (managerId === 'all') {
+      setManagerTeamIds(null);
+      return;
+    }
+    const ids = await fetchManagedAgentIds(managerId);
+    setManagerTeamIds(ids);
+  }, []);
+
   // Apply agent filter to activity logs for all tabs
   const agentFilteredActivity = useMemo(() => {
-    if (agentFilter === 'all') return activityLogs;
-    return activityLogs.filter((a) => a.user_id === agentFilter);
-  }, [activityLogs, agentFilter]);
+    let filtered = activityLogs;
+    if (managerTeamIds) filtered = filtered.filter((a) => a.user_id && managerTeamIds.includes(a.user_id));
+    if (agentFilter !== 'all') filtered = filtered.filter((a) => a.user_id === agentFilter);
+    return filtered;
+  }, [activityLogs, agentFilter, managerTeamIds]);
 
   // Apply activity type filter
   const typeFilteredActivity = useMemo(() => {
@@ -119,9 +136,11 @@ export default function ActivityLogsPage() {
   }, [agentFilteredActivity, activityTypeFilter]);
 
   const agentFilteredSessions = useMemo(() => {
-    if (agentFilter === 'all') return sessions;
-    return sessions.filter((s) => s.user_id === agentFilter);
-  }, [sessions, agentFilter]);
+    let filtered = sessions;
+    if (managerTeamIds) filtered = filtered.filter((s) => managerTeamIds.includes(s.user_id));
+    if (agentFilter !== 'all') filtered = filtered.filter((s) => s.user_id === agentFilter);
+    return filtered;
+  }, [sessions, agentFilter, managerTeamIds]);
 
   const onlineCount = useMemo(
     () => teamMembers.filter((u) => getPresence(u.last_active_at) === 'online').length,
@@ -141,7 +160,11 @@ export default function ActivityLogsPage() {
   // Aggregate per-agent stats — respects agent filter + activity type filter
   const agentStats = useMemo(() => {
     return teamMembers
-      .filter((m) => agentFilter === 'all' || m.id === agentFilter)
+      .filter((m) => {
+        if (managerTeamIds && !managerTeamIds.includes(m.id)) return false;
+        if (agentFilter !== 'all' && m.id !== agentFilter) return false;
+        return true;
+      })
       .map((member) => {
         const memberSessions = sessions.filter((s) => s.user_id === member.id);
         const firstLogin = memberSessions.length > 0
@@ -184,7 +207,7 @@ export default function ActivityLogsPage() {
           totalActions: memberActivity.length,
         };
       });
-  }, [teamMembers, sessions, activityLogs, agentFilter, activityTypeFilter]);
+  }, [teamMembers, sessions, activityLogs, agentFilter, activityTypeFilter, managerTeamIds]);
 
   if (loading) {
     return (
@@ -198,25 +221,25 @@ export default function ActivityLogsPage() {
     <div className="space-y-5 max-w-5xl mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Activity Logs</h1>
-        <p className="text-gray-500 mt-0.5 text-sm">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Activity Logs</h1>
+        <p className="text-gray-500 dark:text-slate-400 mt-0.5 text-sm">
           <span className="text-emerald-600 font-medium">{onlineCount} online</span>
           {' · '}
           <span className="text-amber-600 font-medium">{idleCount} idle</span>
           {' · '}
-          <span className="text-slate-500 font-medium">{teamMembers.length - onlineCount - idleCount} offline</span>
+          <span className="text-slate-500 dark:text-slate-400 font-medium">{teamMembers.length - onlineCount - idleCount} offline</span>
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
+      <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-700 rounded-xl w-fit">
         <TabButton tab={tab} value="presence" onClick={setTab} icon={Users} label="Live Status" />
         <TabButton tab={tab} value="sessions" onClick={setTab} icon={Clock} label="Sessions" />
         <TabButton tab={tab} value="activity" onClick={setTab} icon={Activity} label="Audit Trail" />
       </div>
 
       {/* Advanced Filter Bar — always visible */}
-      <div className="flex flex-wrap items-center gap-3 bg-white rounded-2xl border border-slate-200 p-3">
+      <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-3">
         <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider">
           <Filter size={14} />
           <span>Filters</span>
@@ -227,25 +250,37 @@ export default function ActivityLogsPage() {
           onPresetChange={(p) => { setDatePreset(p); setLoading(true); }}
           onCustomRangeChange={(r) => { setCustomRange(r); setLoading(true); }}
         />
+        {isSuperAdmin && managers.length > 0 && (
+          <select
+            value={managerFilter}
+            onChange={(e) => handleManagerFilterChange(e.target.value)}
+            className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 text-sm font-medium focus:border-[#D4AF37] outline-none transition"
+          >
+            <option value="all">All Managers</option>
+            {managers.map((m) => (
+              <option key={m.id} value={m.id}>{m.full_name || m.username}</option>
+            ))}
+          </select>
+        )}
         <select
           value={agentFilter}
           onChange={(e) => setAgentFilter(e.target.value)}
-          className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-gray-900 text-sm font-medium focus:border-[#D4AF37] outline-none transition"
+          className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 text-sm font-medium focus:border-[#D4AF37] outline-none transition"
         >
           <option value="all">All Members</option>
-          {teamMembers.map((m) => (
+          {(managerTeamIds ? teamMembers.filter((m) => managerTeamIds.includes(m.id)) : teamMembers).map((m) => (
             <option key={m.id} value={m.id}>{m.full_name || m.username}</option>
           ))}
         </select>
-        <div className="flex gap-1 p-1 bg-slate-100 rounded-lg">
+        <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-700 rounded-lg">
           {(['all', 'calls', 'whatsapp', 'updates'] as ActivityTypeFilter[]).map((t) => (
             <button
               key={t}
               onClick={() => setActivityTypeFilter(t)}
               className={`px-3 py-1.5 rounded-md text-xs font-semibold transition capitalize ${
                 activityTypeFilter === t
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 shadow-sm'
+                  : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'
               }`}
             >
               {t === 'all' ? 'All Activity' : t === 'calls' ? 'Calls' : t === 'whatsapp' ? 'WhatsApp' : 'Updates'}
@@ -282,14 +317,14 @@ export default function ActivityLogsPage() {
               label="Updates"
               count={agentStats.reduce((sum, s) => sum + s.leadsUpdated, 0)}
               icon={Edit3}
-              color="bg-slate-100 text-slate-600"
+              color="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
             />
           </div>
 
           {/* Agent list with presence */}
           <div className="space-y-2.5">
             {agentStats.map((stat) => (
-              <div key={stat.member.id} className="bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md transition">
+              <div key={stat.member.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 hover:shadow-md transition">
                 <div className="flex items-center gap-3">
                   <div className="relative flex-shrink-0">
                     <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/10 text-[#a67c00] flex items-center justify-center text-sm font-bold">
@@ -301,16 +336,16 @@ export default function ActivityLogsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-bold text-slate-700 truncate">{stat.member.full_name || stat.member.username}</h3>
+                      <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 truncate">{stat.member.full_name || stat.member.username}</h3>
                       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                         stat.presence === 'online' ? 'bg-emerald-50 text-emerald-600' :
                         stat.presence === 'idle' ? 'bg-amber-50 text-amber-600' :
-                        'bg-slate-100 text-slate-500'
+                        'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
                       }`}>
                         {PRESENCE_LABELS[stat.presence]}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
                       {stat.firstLogin ? `Logged in ${timeAgo(stat.firstLogin)}` : 'Not logged in this period'}
                       {stat.member.last_active_at && ` · Active ${timeAgo(stat.member.last_active_at)}`}
                     </p>
@@ -318,47 +353,47 @@ export default function ActivityLogsPage() {
                   <div className="hidden sm:flex items-center gap-4 text-right">
                     <div>
                       <p className="text-sm font-bold text-blue-600">{stat.callsLogged}</p>
-                      <p className="text-[10px] text-gray-400 uppercase">Calls</p>
+                      <p className="text-[10px] text-gray-400 dark:text-slate-500 uppercase">Calls</p>
                     </div>
                     <div>
                       <p className="text-sm font-bold text-green-600">{stat.whatsappLogged}</p>
-                      <p className="text-[10px] text-gray-400 uppercase">WhatsApp</p>
+                      <p className="text-[10px] text-gray-400 dark:text-slate-500 uppercase">WhatsApp</p>
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-600">{stat.leadsUpdated}</p>
-                      <p className="text-[10px] text-gray-400 uppercase">Updates</p>
+                      <p className="text-sm font-bold text-slate-600 dark:text-slate-300">{stat.leadsUpdated}</p>
+                      <p className="text-[10px] text-gray-400 dark:text-slate-500 uppercase">Updates</p>
                     </div>
                     <div>
                       <p className="text-sm font-bold text-[#1E293B]">{stat.activeHours}</p>
-                      <p className="text-[10px] text-gray-400 uppercase">Active</p>
+                      <p className="text-[10px] text-gray-400 dark:text-slate-500 uppercase">Active</p>
                     </div>
                   </div>
                 </div>
                 {/* Mobile stats */}
-                <div className="sm:hidden mt-3 grid grid-cols-4 gap-2 text-center pt-3 border-t border-slate-100">
+                <div className="sm:hidden mt-3 grid grid-cols-4 gap-2 text-center pt-3 border-t border-slate-100 dark:border-slate-700">
                   <div>
                     <p className="text-sm font-bold text-blue-600">{stat.callsLogged}</p>
-                    <p className="text-[10px] text-gray-400">Calls</p>
+                    <p className="text-[10px] text-gray-400 dark:text-slate-500">Calls</p>
                   </div>
                   <div>
                     <p className="text-sm font-bold text-green-600">{stat.whatsappLogged}</p>
-                    <p className="text-[10px] text-gray-400">WhatsApp</p>
+                    <p className="text-[10px] text-gray-400 dark:text-slate-500">WhatsApp</p>
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-600">{stat.leadsUpdated}</p>
-                    <p className="text-[10px] text-gray-400">Updates</p>
+                    <p className="text-sm font-bold text-slate-600 dark:text-slate-300">{stat.leadsUpdated}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-slate-500">Updates</p>
                   </div>
                   <div>
                     <p className="text-sm font-bold text-[#1E293B]">{stat.activeHours}</p>
-                    <p className="text-[10px] text-gray-400">Active</p>
+                    <p className="text-[10px] text-gray-400 dark:text-slate-500">Active</p>
                   </div>
                 </div>
               </div>
             ))}
             {agentStats.length === 0 && (
-              <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
+              <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
                 <Users size={32} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-sm text-gray-400">No team members found for this filter</p>
+                <p className="text-sm text-gray-400 dark:text-slate-500">No team members found for this filter</p>
               </div>
             )}
           </div>
@@ -367,16 +402,16 @@ export default function ActivityLogsPage() {
 
       {/* ── Sessions Tab ── */}
       {tab === 'sessions' && (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
           {/* Desktop table */}
           <div className="hidden sm:block overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Member</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider"><LogIn size={12} className="inline mr-1 -mt-0.5" />Login</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider"><LogOut size={12} className="inline mr-1 -mt-0.5" />Logout</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider"><Clock size={12} className="inline mr-1 -mt-0.5" />Duration</th>
+                <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Member</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider"><LogIn size={12} className="inline mr-1 -mt-0.5" />Login</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider"><LogOut size={12} className="inline mr-1 -mt-0.5" />Logout</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider"><Clock size={12} className="inline mr-1 -mt-0.5" />Duration</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -388,13 +423,13 @@ export default function ActivityLogsPage() {
                   const durH = Math.floor(durMin / 60);
                   const durM = durMin % 60;
                   return (
-                    <tr key={s.id} className="hover:bg-slate-50 transition">
+                    <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-lg bg-[#D4AF37]/10 text-[#a67c00] flex items-center justify-center text-xs font-bold flex-shrink-0">
                             {userName(s.user_id)[0] || '?'}
                           </div>
-                          <span className="text-sm font-bold text-slate-700">{userName(s.user_id)}</span>
+                          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{userName(s.user_id)}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(s.login_at)}</td>
@@ -410,7 +445,7 @@ export default function ActivityLogsPage() {
                   );
                 })}
                 {agentFilteredSessions.length === 0 && (
-                  <tr><td colSpan={4} className="text-center py-10 text-gray-400 text-sm">No sessions in this range</td></tr>
+                  <tr><td colSpan={4} className="text-center py-10 text-gray-400 dark:text-slate-500 text-sm">No sessions in this range</td></tr>
                 )}
               </tbody>
             </table>
@@ -431,21 +466,21 @@ export default function ActivityLogsPage() {
                     <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/10 text-[#a67c00] flex items-center justify-center text-xs font-bold flex-shrink-0">
                       {userName(s.user_id)[0] || '?'}
                     </div>
-                    <span className="text-sm font-bold text-slate-700">{userName(s.user_id)}</span>
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{userName(s.user_id)}</span>
                     {!s.logout_at && (
                       <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">Active</span>
                     )}
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div><span className="text-gray-400">Login:</span> <span className="text-gray-600">{formatDateTime(s.login_at)}</span></div>
-                    <div><span className="text-gray-400">Logout:</span> <span className="text-gray-600">{s.logout_at ? formatDateTime(s.logout_at) : '—'}</span></div>
-                    <div><span className="text-gray-400">Duration:</span> <span className="text-gray-900 font-semibold">{durH > 0 ? `${durH}h ${durM}m` : `${durM}m`}</span></div>
+                    <div><span className="text-gray-400 dark:text-slate-500">Login:</span> <span className="text-gray-600">{formatDateTime(s.login_at)}</span></div>
+                    <div><span className="text-gray-400 dark:text-slate-500">Logout:</span> <span className="text-gray-600">{s.logout_at ? formatDateTime(s.logout_at) : '—'}</span></div>
+                    <div><span className="text-gray-400 dark:text-slate-500">Duration:</span> <span className="text-gray-900 dark:text-slate-100 font-semibold">{durH > 0 ? `${durH}h ${durM}m` : `${durM}m`}</span></div>
                   </div>
                 </div>
               );
             })}
             {agentFilteredSessions.length === 0 && (
-              <div className="text-center py-10 text-gray-400 text-sm">No sessions in this range</div>
+              <div className="text-center py-10 text-gray-400 dark:text-slate-500 text-sm">No sessions in this range</div>
             )}
           </div>
         </div>
@@ -453,11 +488,11 @@ export default function ActivityLogsPage() {
 
       {/* ── Audit Trail Tab ── */}
       {tab === 'activity' && (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
           {typeFilteredActivity.length === 0 ? (
             <div className="text-center py-12">
               <Activity size={32} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-sm text-gray-400">No activity matches these filters</p>
+              <p className="text-sm text-gray-400 dark:text-slate-500">No activity matches these filters</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-50 max-h-[600px] overflow-y-auto">
@@ -469,20 +504,20 @@ export default function ActivityLogsPage() {
                 const isReassign = log.action.toLowerCase().includes('reassign');
 
                 const Icon = isCall ? Phone : isWhatsApp ? MessageCircle : isCreate ? TrendingUp : isReassign ? Users : isEdit ? Edit3 : Activity;
-                const colorClass = isCall ? 'bg-blue-100 text-blue-600' : isWhatsApp ? 'bg-green-100 text-green-600' : isCreate ? 'bg-sky-100 text-sky-600' : isReassign ? 'bg-orange-100 text-orange-600' : isEdit ? 'bg-slate-100 text-slate-600' : 'bg-slate-100 text-slate-500';
+                const colorClass = isCall ? 'bg-blue-100 text-blue-600' : isWhatsApp ? 'bg-green-100 text-green-600' : isCreate ? 'bg-sky-100 text-sky-600' : isReassign ? 'bg-orange-100 text-orange-600' : isEdit ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400';
 
                 return (
-                  <div key={log.id} className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition">
+                  <div key={log.id} className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
                     <div className={`w-8 h-8 rounded-lg ${colorClass} flex items-center justify-center flex-shrink-0`}>
                       <Icon size={14} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">{log.action}</p>
-                      {log.detail && <p className="text-xs text-gray-500 mt-0.5 break-words">{log.detail}</p>}
+                      <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">{log.action}</p>
+                      {log.detail && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 break-words">{log.detail}</p>}
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-gray-400">{formatDateTime(log.created_at)}</span>
-                        <span className="text-xs text-gray-400">·</span>
-                        <span className="text-xs text-gray-500 font-medium">{userName(log.user_id)}</span>
+                        <span className="text-xs text-gray-400 dark:text-slate-500">{formatDateTime(log.created_at)}</span>
+                        <span className="text-xs text-gray-400 dark:text-slate-500">·</span>
+                        <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">{userName(log.user_id)}</span>
                       </div>
                     </div>
                   </div>
@@ -513,7 +548,7 @@ function TabButton({
     <button
       onClick={() => onClick(value)}
       className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition ${
-        tab === value ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+        tab === value ? 'bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'
       }`}
     >
       <Icon size={16} />
@@ -526,29 +561,29 @@ function PresenceCard({ label, count, color }: { label: string; count: number; c
   const colorMap = {
     emerald: { dot: 'bg-emerald-500', text: 'text-emerald-600', bg: 'bg-emerald-50' },
     amber: { dot: 'bg-amber-400', text: 'text-amber-600', bg: 'bg-amber-50' },
-    slate: { dot: 'bg-slate-300', text: 'text-slate-500', bg: 'bg-slate-50' },
+    slate: { dot: 'bg-slate-300', text: 'text-slate-500 dark:text-slate-400', bg: 'bg-slate-50 dark:bg-slate-800' },
   };
   const c = colorMap[color];
   return (
-    <div className={`rounded-2xl border border-slate-200 p-4 ${c.bg}`}>
+    <div className={`rounded-2xl border border-slate-200 dark:border-slate-700 p-4 ${c.bg}`}>
       <div className="flex items-center gap-2 mb-1">
         <span className={`w-2.5 h-2.5 rounded-full ${c.dot}`} />
         <span className={`text-xs font-bold ${c.text} uppercase tracking-wider`}>{label}</span>
       </div>
-      <p className="text-2xl font-bold text-gray-900">{count}</p>
+      <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{count}</p>
     </div>
   );
 }
 
 function ActivityCounterCard({ label, count, icon: Icon, color }: { label: string; count: number; icon: typeof Phone; color: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 flex items-center gap-3">
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 flex items-center gap-3">
       <div className={`w-9 h-9 rounded-xl ${color} flex items-center justify-center flex-shrink-0`}>
         <Icon size={16} />
       </div>
       <div>
-        <p className="text-2xl font-bold text-gray-900 leading-none">{count}</p>
-        <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-1">{label}</p>
+        <p className="text-2xl font-bold text-gray-900 dark:text-slate-100 leading-none">{count}</p>
+        <p className="text-[10px] text-gray-400 dark:text-slate-500 uppercase tracking-wider mt-1">{label}</p>
       </div>
     </div>
   );

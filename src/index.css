@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 html {
   scroll-behavior: smooth;
 }
@@ -11,14 +13,22 @@ body {
   background: #F8FAFC;
 }
 
-/* ── Light CRM Theme Utilities ───────────────────────────────── */
+.dark body {
+  background: #0F172A;
+}
+
+/* ── CRM Theme Utilities (Light + Dark) ──────────────────────── */
 
 @layer components {
-  /* Clean white card */
+  /* Clean white card — dark mode: slate-800 */
   .glass-card {
     background: #FFFFFF;
     border: 1px solid #E2E8F0;
     border-radius: 1rem;
+  }
+  .dark .glass-card {
+    background: #1E293B;
+    border-color: #334155;
   }
 
   .glass-card-hover {
@@ -31,6 +41,14 @@ body {
     border-color: #CBD5E1;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     transform: translateY(-1px);
+  }
+  .dark .glass-card-hover {
+    background: #1E293B;
+    border-color: #334155;
+  }
+  .dark .glass-card-hover:hover {
+    border-color: #475569;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   }
 
   /* Premium stat card */
@@ -45,11 +63,24 @@ body {
     transform: translateY(-2px);
     border-color: #CBD5E1;
   }
+  .dark .stat-card-glass {
+    background: #1E293B;
+    border-color: #334155;
+  }
+  .dark .stat-card-glass:hover {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+    border-color: #475569;
+  }
 
-  /* Light surface for inputs/selects */
+  /* Surface for inputs/selects — dark mode: slate-800 */
   .surface-dark {
     background: #FFFFFF;
     border: 1px solid #E2E8F0;
+  }
+  .dark .surface-dark {
+    background: #1E293B;
+    border-color: #334155;
+    color: #E2E8F0;
   }
 
   /* Glow badge for urgent items */
@@ -61,6 +92,47 @@ body {
   }
   .badge-glow-amber {
     box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+  }
+
+  /* Dark mode text helpers */
+  .text-primary {
+    color: #0F172A;
+  }
+  .dark .text-primary {
+    color: #F1F5F9;
+  }
+
+  .text-secondary {
+    color: #64748B;
+  }
+  .dark .text-secondary {
+    color: #94A3B8;
+  }
+
+  .text-muted {
+    color: #94A3B8;
+  }
+  .dark .text-muted {
+    color: #64748B;
+  }
+
+  /* Dark mode border helpers */
+  .border-default {
+    border-color: #E2E8F0;
+  }
+  .dark .border-default {
+    border-color: #334155;
+  }
+
+  /* Dark mode bg for hover rows */
+  .row-hover {
+    background: transparent;
+  }
+  .row-hover:hover {
+    background: #F8FAFC;
+  }
+  .dark .row-hover:hover {
+    background: #334155;
   }
 }
 

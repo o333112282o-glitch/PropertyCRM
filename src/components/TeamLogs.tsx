@@ -104,7 +104,7 @@ export default function TeamLogs({ users }: TeamLogsProps) {
     <div className="space-y-4">
       {/* Date filter */}
       <div className="flex items-center gap-3">
-        <Calendar size={18} className="text-gray-400" />
+        <Calendar size={18} className="text-gray-400 dark:text-slate-500" />
         <input
           type="date"
           value={dateFilter}
@@ -112,49 +112,49 @@ export default function TeamLogs({ users }: TeamLogsProps) {
             setDateFilter(e.target.value);
             setLoading(true);
           }}
-          className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-gray-900 text-sm font-medium focus:border-[#D4AF37] outline-none transition"
+          className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 text-sm font-medium focus:border-[#D4AF37] outline-none transition"
         />
-        <span className="text-sm text-gray-500">{formatDate(dateFilter)}</span>
+        <span className="text-sm text-gray-500 dark:text-slate-400">{formatDate(dateFilter)}</span>
       </div>
 
       {/* Stats table */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Team Member</th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
+              <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Team Member</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   <LogIn size={12} className="inline mr-1 -mt-0.5" /> Login
                 </th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   <LogOut size={12} className="inline mr-1 -mt-0.5" /> Logout
                 </th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   <Clock size={12} className="inline mr-1 -mt-0.5" /> Active Hrs
                 </th>
-                <th className="text-center px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <th className="text-center px-4 py-3 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   <Phone size={12} className="inline mr-1 -mt-0.5" /> Calls
                 </th>
-                <th className="text-center px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <th className="text-center px-4 py-3 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   <MessageCircle size={12} className="inline mr-1 -mt-0.5" /> WhatsApp
                 </th>
-                <th className="text-center px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <th className="text-center px-4 py-3 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   <Edit3 size={12} className="inline mr-1 -mt-0.5" /> Updates
                 </th>
               </tr>
             </thead>
             <tbody>
               {stats.map((stat) => (
-                <tr key={stat.user.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
+                <tr key={stat.user.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/10 text-[#a67c00] flex items-center justify-center text-xs font-bold flex-shrink-0">
                         {stat.user.full_name?.[0] || stat.user.username[0].toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-slate-700 truncate">{stat.user.full_name || stat.user.username}</p>
-                        <p className="text-[10px] text-gray-400 capitalize">{stat.user.role}</p>
+                        <p className="text-base font-bold text-slate-900 dark:text-slate-100 truncate">{stat.user.full_name || stat.user.username}</p>
+                        <p className="text-[10px] text-gray-400 dark:text-slate-500 capitalize">{stat.user.role}</p>
                       </div>
                     </div>
                   </td>
@@ -166,7 +166,7 @@ export default function TeamLogs({ users }: TeamLogsProps) {
                   </td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#1E293B]">
-                      <Clock size={13} className="text-gray-400" />
+                      <Clock size={13} className="text-gray-400 dark:text-slate-500" />
                       {stat.activeHours}
                     </span>
                   </td>
@@ -181,7 +181,7 @@ export default function TeamLogs({ users }: TeamLogsProps) {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold">
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm font-bold">
                       {stat.leadsUpdated}
                     </span>
                   </td>
@@ -189,7 +189,7 @@ export default function TeamLogs({ users }: TeamLogsProps) {
               ))}
               {stats.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-gray-400 text-sm">
+                  <td colSpan={7} className="text-center py-10 text-gray-400 dark:text-slate-500 text-sm">
                     No team members found
                   </td>
                 </tr>

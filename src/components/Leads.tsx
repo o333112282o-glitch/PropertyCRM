@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Plus, Search, Briefcase, Grid3x3, List, Trash2, Edit2, Tag, History, Pencil, MapPin, ChevronDown } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { useAuth, useVisibleAgentIds } from '@/lib/auth';
+import { useAuth, useVisibleAgentIds, fetchManagedAgentIds } from '@/lib/auth';
 import { useDebouncedRealtimeLeads } from '@/lib/useRealtime';
 import {
   Lead,
@@ -42,7 +42,9 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState<LeadStage | 'all'>('all');
   const [agentFilter, setAgentFilter] = useState<string>('all');
+  const [managerFilter, setManagerFilter] = useState<string>('all');
   const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [managerTeamIds, setManagerTeamIds] = useState<string[] | null>(null);
   const [datePreset, setDatePreset] = useState<DatePreset>('all');
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -98,10 +100,24 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
 
   useDebouncedRealtimeLeads(fetchData);
 
+  const managers = useMemo(() => users.filter((u) => u.role === 'manager'), [users]);
+
+  const handleManagerFilterChange = useCallback(async (managerId: string) => {
+    setManagerFilter(managerId);
+    setAgentFilter('all');
+    if (managerId === 'all') {
+      setManagerTeamIds(null);
+      return;
+    }
+    const ids = await fetchManagedAgentIds(managerId);
+    setManagerTeamIds(ids);
+  }, []);
+
   const filteredLeads = useMemo(() => {
     return leads.filter((l) => {
       if (stageFilter !== 'all' && l.stage !== stageFilter) return false;
       if (agentFilter !== 'all' && l.assigned_to !== agentFilter) return false;
+      if (managerTeamIds && !managerTeamIds.includes(l.assigned_to || '')) return false;
       if (projectFilter !== 'all' && l.project_id !== projectFilter) return false;
       if (search) {
         const q = search.toLowerCase();
@@ -114,7 +130,7 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
       }
       return true;
     });
-  }, [leads, stageFilter, agentFilter, projectFilter, search]);
+  }, [leads, stageFilter, agentFilter, projectFilter, search, managerTeamIds]);
 
   const kanbanData = useMemo(() => {
     return LEAD_STAGES.map((stage) => ({
@@ -248,14 +264,27 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
             ))}
           </select>
 
+          {isSuperAdmin && managers.length > 0 && (
+            <select
+              value={managerFilter}
+              onChange={(e) => handleManagerFilterChange(e.target.value)}
+              className="px-3.5 py-2.5 rounded-xl surface-dark text-slate-700 dark:text-slate-200 text-sm font-medium focus:border-[#D4AF37] outline-none transition"
+            >
+              <option value="all">All Managers</option>
+              {managers.map((m) => (
+                <option key={m.id} value={m.id}>{m.full_name || m.username}</option>
+              ))}
+            </select>
+          )}
+
           {!isAgent && (
             <select
               value={agentFilter}
               onChange={(e) => setAgentFilter(e.target.value)}
-              className="px-3.5 py-2.5 rounded-xl surface-dark text-slate-700 text-sm font-medium focus:border-[#D4AF37] outline-none transition"
+              className="px-3.5 py-2.5 rounded-xl surface-dark text-slate-700 dark:text-slate-200 text-sm font-medium focus:border-[#D4AF37] outline-none transition"
             >
               <option value="all">All Agents</option>
-              {users.filter((u) => u.role === 'agent' || u.role === 'manager').map((u) => (
+              {(managerTeamIds ? users.filter((u) => managerTeamIds.includes(u.id)) : users.filter((u) => u.role === 'agent' || u.role === 'manager')).map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.full_name || u.username}
                 </option>
@@ -380,8 +409,8 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
                         <span className="font-medium text-slate-700">{lead.phone}</span>
                         {lead.budget_range && <span>{lead.budget_range}</span>}
                         {!isAgent && (
-                          <span className="text-slate-400">
-                            Agent: <span className={`${lead.assigned_to ? 'text-slate-700 font-bold' : 'text-amber-600 font-bold'}`}>{agentName(lead.assigned_to)}</span>
+                          <span className="text-slate-400 dark:text-slate-500">
+                            Agent: <span className={`${lead.assigned_to ? 'text-slate-900 dark:text-slate-100 font-bold' : 'text-amber-600 font-bold'}`}>{agentName(lead.assigned_to)}</span>
                           </span>
                         )}
                         {lead.next_followup_at && !['Won', 'Lost'].includes(lead.stage) && (
@@ -496,7 +525,7 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
                           <p className="text-xs text-slate-700 font-medium mb-2">{lead.budget_range}</p>
                         )}
                         {!isAgent && (
-                          <p className="text-[10px] text-slate-400 mb-2">
+                          <p className="text-[11px] text-slate-900 dark:text-slate-100 font-bold mb-2">
                             {agentName(lead.assigned_to)}
                           </p>
                         )}

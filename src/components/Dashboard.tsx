@@ -149,8 +149,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     const missed = stats.missedFollowUps.map((l) => ({ ...l, urgentType: 'missed' as const }));
     const unassigned = stats.unassignedLeads.map((l) => ({ ...l, urgentType: 'unassigned' as const }));
     return [...missed, ...unassigned].sort((a, b) => {
-      // Missed first, then by created_at
       if (a.urgentType !== b.urgentType) return a.urgentType === 'missed' ? -1 : 1;
+      // Within missed: oldest overdue first (most urgent)
+      if (a.urgentType === 'missed') {
+        const aTime = a.next_followup_at ? new Date(a.next_followup_at).getTime() : 0;
+        const bTime = b.next_followup_at ? new Date(b.next_followup_at).getTime() : 0;
+        return aTime - bTime;
+      }
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
   }, [stats.missedFollowUps, stats.unassignedLeads]);
@@ -212,10 +217,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-[#0F172A]">
+          <h1 className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">
             {greeting}, {user?.full_name?.split(' ')[0] || user?.username}!
           </h1>
-          <p className="text-slate-500 mt-1">
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
             {isAgent
               ? "Here's your pipeline at a glance"
               : isManager
@@ -235,7 +240,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <select
               value={agentFilter}
               onChange={(e) => setAgentFilter(e.target.value)}
-              className="px-3.5 py-2.5 rounded-xl surface-dark text-slate-700 text-sm font-medium focus:border-[#D4AF37] outline-none transition cursor-pointer"
+              className="px-3.5 py-2.5 rounded-xl surface-dark text-slate-700 dark:text-slate-200 text-sm font-medium focus:border-[#D4AF37] outline-none transition cursor-pointer"
             >
               <option value="all">All Agents</option>
               {agents.filter((a) => a.role === 'agent' || a.role === 'manager').map((a) => (
@@ -250,7 +255,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <select
                 value={projectFilter}
                 onChange={(e) => setProjectFilter(e.target.value)}
-                className="pl-9 pr-8 py-2.5 rounded-xl surface-dark text-slate-700 text-sm font-medium focus:border-[#D4AF37] outline-none transition appearance-none cursor-pointer"
+                className="pl-9 pr-8 py-2.5 rounded-xl surface-dark text-slate-700 dark:text-slate-200 text-sm font-medium focus:border-[#D4AF37] outline-none transition appearance-none cursor-pointer"
               >
                 <option value="all">All Projects</option>
                 {projects.map((p) => (
@@ -326,16 +331,16 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       {selectedCard && (
         <div className="glass-card p-5 lg:p-6 animate-[fadeInUp_.2s_ease-out]">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-[#0F172A]">
+            <h2 className="text-lg font-bold text-[#0F172A] dark:text-slate-100">
               {selectedCard === 'followups' && 'Follow-ups Today'}
               {selectedCard === 'missed' && 'Missed Follow-ups'}
               {selectedCard === 'unassigned' && 'Unassigned New Leads'}
               {selectedCard === 'active' && 'Active Leads'}
-              <span className="text-sm font-normal text-slate-400 ml-2">({cardLeads.length})</span>
+              <span className="text-sm font-normal text-slate-400 dark:text-slate-500 ml-2">({cardLeads.length})</span>
             </h2>
             <button
               onClick={() => setSelectedCard(null)}
-              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition"
+              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition"
             >
               <X size={18} />
             </button>
@@ -353,16 +358,16 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     key={lead.id}
                     className={`flex items-center gap-3 p-3 rounded-xl border transition ${
                       isMissed
-                        ? 'border-red-200 bg-red-50/50 hover:bg-red-50'
-                        : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
+                        ? 'border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/20 hover:bg-red-50 dark:hover:bg-red-900/30'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800'
                     }`}
                   >
-                    <div className="w-9 h-9 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-xs font-bold flex-shrink-0">
                       {lead.client_name[0]}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[#0F172A] truncate">{lead.client_name}</p>
-                      <p className="text-xs text-slate-500 truncate">
+                      <p className="text-sm font-semibold text-[#0F172A] dark:text-slate-100 truncate">{lead.client_name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                         {lead.phone}
                         {lead.next_followup_at && (selectedCard === 'followups' || isMissed) && (
                           <span className={isMissed ? 'text-red-600 ml-1 font-medium' : 'text-orange-600 ml-1'}>
@@ -370,7 +375,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                           </span>
                         )}
                         {!isAgent && lead.assigned_to && (
-                          <span className="ml-1">· <span className="font-bold text-slate-700">{agentName(lead.assigned_to)}</span></span>
+                          <span className="ml-1">· <span className="font-bold text-slate-900 dark:text-slate-100">{agentName(lead.assigned_to)}</span></span>
                         )}
                         {!isAgent && !lead.assigned_to && (
                           <span className="text-amber-600 ml-1 font-bold">· Unassigned</span>
@@ -402,7 +407,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                       </button>
                       <button
                         onClick={() => setQuickEditLead(lead)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition active:scale-95"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition active:scale-95"
                         title="Quick Edit"
                       >
                         <Edit3 size={14} />
@@ -422,10 +427,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         <div className="lg:col-span-3 glass-card p-5 lg:p-6">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
                 <Flame size={18} className="text-red-500" />
               </div>
-              <h2 className="text-lg font-bold text-[#0F172A]">Urgent Action Queue</h2>
+              <h2 className="text-lg font-bold text-[#0F172A] dark:text-slate-100">Urgent Action Queue</h2>
             </div>
             <span className="text-xs font-bold text-white bg-red-500 px-2.5 py-1 rounded-full">
               {urgentItems.length} items
@@ -435,8 +440,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           {urgentItems.length === 0 ? (
             <div className="text-center py-10">
               <CheckCircle2 size={32} className="mx-auto mb-2 text-emerald-500/50" />
-              <p className="text-sm text-slate-500 font-medium">All caught up!</p>
-              <p className="text-xs text-slate-400 mt-0.5">No missed follow-ups or unassigned leads</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">All caught up!</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">No missed follow-ups or unassigned leads</p>
             </div>
           ) : (
             <div className="space-y-2.5 max-h-[420px] overflow-y-auto">
@@ -459,30 +464,30 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     key={item.id}
                     className={`flex items-center gap-3 p-3 rounded-xl border transition ${
                       isMissed
-                        ? 'border-red-200 bg-red-50/40 hover:bg-red-50'
-                        : 'border-amber-200 bg-amber-50/40 hover:bg-amber-50'
+                        ? 'border-red-200 dark:border-red-800 bg-red-50/40 dark:bg-red-900/20 hover:bg-red-50 dark:hover:bg-red-900/30'
+                        : 'border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-900/20 hover:bg-amber-50 dark:hover:bg-amber-900/30'
                     }`}
                   >
                     {/* Urgency indicator */}
                     <div className={`w-1 h-10 rounded-full flex-shrink-0 ${isMissed ? 'bg-red-500' : 'bg-amber-500'}`} />
 
                     {/* Avatar */}
-                    <div className="w-9 h-9 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-xs font-bold flex-shrink-0">
                       {item.client_name[0]}
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[#0F172A] truncate">{item.client_name}</p>
+                      <p className="text-sm font-semibold text-[#0F172A] dark:text-slate-100 truncate">{item.client_name}</p>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {!isAgent && (
-                          <span className={`text-xs font-bold ${item.assigned_to ? 'text-slate-700' : 'text-amber-600'}`}>
+                          <span className={`text-sm font-bold ${item.assigned_to ? 'text-slate-900 dark:text-slate-100' : 'text-amber-600'}`}>
                             {agentName(item.assigned_to)}
                           </span>
                         )}
                         {isMissed ? (
-                          <span className="text-[10px] font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded">
-                            {overdueText}
+                          <span className="text-[10px] font-bold text-white bg-gradient-to-r from-red-500 to-orange-500 px-2 py-0.5 rounded-full shadow-sm">
+                            Overdue: {overdueDays > 0 ? `${overdueDays} Day${overdueDays > 1 ? 's' : ''}` : `${overdueHours} Hour${overdueHours > 1 ? 's' : ''}`}
                           </span>
                         ) : (
                           <span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded">
@@ -513,7 +518,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                       </button>
                       <button
                         onClick={() => setQuickEditLead(item)}
-                        className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition active:scale-95"
+                        className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition active:scale-95"
                         title="Quick Edit"
                       >
                         <Edit3 size={15} />
@@ -538,7 +543,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         <div className="lg:col-span-2 space-y-4">
           {/* Pipeline Summary */}
           <div className="glass-card p-5">
-            <h2 className="text-lg font-bold text-[#0F172A] mb-4">Pipeline Summary</h2>
+            <h2 className="text-lg font-bold text-[#0F172A] dark:text-slate-100 mb-4">Pipeline Summary</h2>
             <div className="space-y-2.5">
               {stageBreakdown.map(({ stage, count }) => {
                 const colors = STAGE_COLORS[stage];
@@ -549,7 +554,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                       <span className={`w-2 h-2 rounded-full ${colors.dot}`} />
                       <span className="text-xs font-medium text-slate-600 truncate">{stage}</span>
                     </div>
-                    <div className="flex-1 h-5 bg-slate-100 rounded-lg overflow-hidden relative">
+                    <div className="flex-1 h-5 bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden relative">
                       <div
                         className={`h-full ${colors.dot} transition-all duration-500 flex items-center justify-end pr-1.5`}
                         style={{ width: `${Math.max(pct, count > 0 ? 8 : 0)}%` }}
@@ -564,36 +569,36 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 );
               })}
             </div>
-            <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
+            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 grid grid-cols-3 gap-2 text-center">
               <div>
-                <p className="text-lg font-bold text-[#0F172A]">{stats.total}</p>
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider">Total</p>
+                <p className="text-lg font-bold text-[#0F172A] dark:text-slate-100">{stats.total}</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-emerald-600">{stats.won}</p>
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider">Won</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Won</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-[#D4AF37]">{formatCurrency(stats.totalToken)}</p>
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider">Token</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Token</p>
               </div>
             </div>
           </div>
 
           {/* Quick Dialer */}
           <div className="glass-card p-5">
-            <h2 className="text-base font-bold text-[#0F172A] mb-3">Quick Actions</h2>
+            <h2 className="text-base font-bold text-[#0F172A] dark:text-slate-100 mb-3">Quick Actions</h2>
             <div className="grid grid-cols-2 gap-2.5">
               <button
                 onClick={() => setShowInbound(true)}
-                className="flex flex-col items-center gap-1.5 py-4 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-semibold text-sm transition"
+                className="flex flex-col items-center gap-1.5 py-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 font-semibold text-sm transition"
               >
                 <PhoneIncoming size={22} />
                 Inbound Call
               </button>
               <button
                 onClick={() => onNavigate('leads')}
-                className="flex flex-col items-center gap-1.5 py-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-semibold text-sm transition"
+                className="flex flex-col items-center gap-1.5 py-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 font-semibold text-sm transition"
               >
                 <PhoneOutgoing size={22} />
                 Make Calls
@@ -601,9 +606,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             </div>
             {/* Today's follow-up count badge */}
             {stats.followUpsToday.length > 0 && (
-              <div className="mt-3 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-orange-50 border border-orange-200">
+              <div className="mt-3 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
                 <Zap size={16} className="text-orange-500 flex-shrink-0" />
-                <p className="text-xs text-orange-700 font-medium">
+                <p className="text-xs text-orange-700 dark:text-orange-400 font-medium">
                   <span className="font-bold">{stats.followUpsToday.length}</span> follow-up{stats.followUpsToday.length > 1 ? 's' : ''} due today
                 </p>
                 <button
@@ -623,7 +628,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         {/* Recent leads */}
         <div className="glass-card p-5 lg:p-6">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-bold text-[#0F172A]">Recent Activity</h2>
+            <h2 className="text-lg font-bold text-[#0F172A] dark:text-slate-100">Recent Activity</h2>
             <button
               onClick={() => onNavigate('leads')}
               className="text-sm font-semibold text-[#D4AF37] hover:underline flex items-center gap-1"
@@ -633,16 +638,16 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           </div>
           <div className="space-y-3">
             {recentLeads.map((lead) => (
-              <div key={lead.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition border border-slate-100">
-                <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+              <div key={lead.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition border border-slate-100 dark:border-slate-700">
+                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-sm font-bold flex-shrink-0">
                   {lead.client_name[0]}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[#0F172A] truncate">{lead.client_name}</p>
-                  <p className="text-xs text-slate-500 truncate">
+                  <p className="text-sm font-semibold text-[#0F172A] dark:text-slate-100 truncate">{lead.client_name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                     {lead.requirement || '—'} · {timeAgo(lead.updated_at)}
                     {!isAgent && lead.assigned_to && (
-                      <span className="ml-1">· <span className="font-bold text-slate-700">{agentName(lead.assigned_to)}</span></span>
+                      <span className="ml-1">· <span className="font-bold text-slate-900 dark:text-slate-100">{agentName(lead.assigned_to)}</span></span>
                     )}
                   </p>
                 </div>
@@ -676,8 +681,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         {!isAgent && (
           <div className="glass-card p-5 lg:p-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-[#0F172A]">Team Performance</h2>
-              <UsersIcon size={18} className="text-slate-400" />
+              <h2 className="text-lg font-bold text-[#0F172A] dark:text-slate-100">Team Performance</h2>
+              <UsersIcon size={18} className="text-slate-400 dark:text-slate-500" />
             </div>
             <div className="space-y-3">
               {agents
@@ -694,7 +699,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   }).length;
                   const presence = getPresence(agent.last_active_at);
                   return (
-                    <div key={agent.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition">
+                    <div key={agent.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
                       <div className="relative flex-shrink-0">
                         <div className="w-10 h-10 rounded-full bg-[#D4AF37]/15 text-[#a67c00] flex items-center justify-center text-sm font-bold">
                           {agent.full_name?.[0] || agent.username[0].toUpperCase()}
@@ -702,24 +707,24 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                         <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full ${PRESENCE_COLORS[presence]} border-2 border-white`} title={PRESENCE_LABELS[presence]} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-[#0F172A] truncate">
+                        <p className="text-base font-bold text-[#0F172A] dark:text-slate-100 truncate">
                           {agent.full_name || agent.username}
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           {agentLeads.length} leads · {agentActive} active · {agentWon} won
-                          {agentMissed > 0 && <span className="text-red-600 font-bold"> · {agentMissed} missed</span>}
+                          {agentMissed > 0 && <span className="text-red-600 dark:text-red-400 font-bold"> · {agentMissed} missed</span>}
                         </p>
                       </div>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        presence === 'online' ? 'bg-emerald-50 text-emerald-600' :
-                        presence === 'idle' ? 'bg-amber-50 text-amber-600' :
-                        'bg-slate-100 text-slate-500'
+                        presence === 'online' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
+                        presence === 'idle' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' :
+                        'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
                       }`}>
                         {PRESENCE_LABELS[presence]}
                       </span>
                       <div className="text-right">
-                        <p className="text-lg font-bold text-[#0F172A]">{agentWon}</p>
-                        <p className="text-[10px] text-slate-400 uppercase tracking-wider">won</p>
+                        <p className="text-lg font-bold text-[#0F172A] dark:text-slate-100">{agentWon}</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider">won</p>
                       </div>
                     </div>
                   );
@@ -731,27 +736,27 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         {/* Agent quick stats (agent only) */}
         {isAgent && (
           <div className="glass-card p-5 lg:p-6">
-            <h2 className="text-lg font-bold text-[#0F172A] mb-5">Your Performance</h2>
+            <h2 className="text-lg font-bold text-[#0F172A] dark:text-slate-100 mb-5">Your Performance</h2>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
                 <Target className="text-[#D4AF37] mb-2" size={22} />
                 <p className="text-2xl font-bold text-[#0F172A]">{stats.active}</p>
                 <p className="text-sm text-slate-500">Active Leads</p>
               </div>
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
                 <CheckCircle2 className="text-emerald-500 mb-2" size={22} />
-                <p className="text-2xl font-bold text-[#0F172A]">{stats.won}</p>
-                <p className="text-sm text-slate-500">Deals Won</p>
+                <p className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">{stats.won}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Deals Won</p>
               </div>
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
                 <Clock className="text-orange-500 mb-2" size={22} />
-                <p className="text-2xl font-bold text-[#0F172A]">{stats.followUpsToday.length}</p>
-                <p className="text-sm text-slate-500">Due Today</p>
+                <p className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">{stats.followUpsToday.length}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Due Today</p>
               </div>
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
                 <TrendingUp className="text-[#D4AF37] mb-2" size={22} />
-                <p className="text-2xl font-bold text-[#0F172A]">{stats.conversionRate}%</p>
-                <p className="text-sm text-slate-500">Win Rate</p>
+                <p className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">{stats.conversionRate}%</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Win Rate</p>
               </div>
             </div>
           </div>
@@ -820,8 +825,8 @@ function StatCard({ label, value, icon: Icon, iconBg, trend, trendUp, active, gl
           <Icon size={20} />
         </div>
       </div>
-      <p className="text-2xl lg:text-3xl font-bold text-[#0F172A]">{value}</p>
-      <p className="text-sm text-slate-500 mt-0.5">{label}</p>
+      <p className="text-2xl lg:text-3xl font-bold text-[#0F172A] dark:text-slate-100">{value}</p>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{label}</p>
       {trend && (
         <div className={`flex items-center gap-1 mt-2 text-xs font-medium ${
           trendUp ? 'text-emerald-600' : glow === 'red' ? 'text-red-600' : glow === 'amber' ? 'text-amber-600' : 'text-slate-500'
