@@ -35,7 +35,7 @@ const CALL_OUTCOME_ICONS: Record<CallOutcome, typeof Phone> = {
 };
 
 export default function LeadForm({ lead, users, projects = [], onClose, onSaved, onDuplicatePhone }: LeadFormProps) {
-  const { user, isAgent, isDealer } = useAuth();
+  const { user, isAgent, isDealer, isLeadCreator } = useAuth();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +55,7 @@ export default function LeadForm({ lead, users, projects = [], onClose, onSaved,
   );
   const [projectId, setProjectId] = useState<string>(lead?.project_id || '');
 
-  const agents = users.filter((u) => u.role === 'agent' || u.role === 'manager');
+  const agents = users.filter((u) => (u.role === 'agent' || u.role === 'manager') && !u.is_disabled);
   const activeProjects = projects.filter((p) => p.status === 'active');
   const needsFollowup = stage === 'Follow-up Date';
   const needsToken = stage === 'Token Received';
@@ -160,6 +160,13 @@ export default function LeadForm({ lead, users, projects = [], onClose, onSaved,
         user_id: user?.id,
         action: 'Lead Updated',
         detail: `Stage: ${stage}${callOutcome ? ` | Call: ${callOutcome}` : ''}`,
+      });
+    } else if (assignedTo && isLeadCreator) {
+      await supabase.from('activity_logs').insert({
+        lead_id: null,
+        user_id: user?.id,
+        action: 'Lead Created & Assigned',
+        detail: `New lead assigned to agent ${agents.find((a) => a.id === assignedTo)?.full_name || agents.find((a) => a.id === assignedTo)?.username || 'Unknown'}`,
       });
     }
 

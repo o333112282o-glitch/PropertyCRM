@@ -5,6 +5,7 @@ import {
   Lead,
   LeadStage,
   Project,
+  User,
   STAGE_COLORS,
   DuplicateApprovalRequest,
 } from '@/lib/types';
@@ -26,6 +27,7 @@ export default function LeadCreatorDashboard({ mode }: LeadCreatorDashboardProps
   const { user } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [agents, setAgents] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showInbound, setShowInbound] = useState(false);
@@ -46,6 +48,7 @@ export default function LeadCreatorDashboard({ mode }: LeadCreatorDashboardProps
 
   useEffect(() => {
     supabase.from('projects').select('*').eq('status', 'active').then(({ data }) => setProjects((data as Project[]) || []));
+    supabase.from('users').select('*').eq('is_disabled', false).in('role', ['agent', 'manager']).then(({ data }) => setAgents((data as User[]) || []));
     fetchLeads();
   }, [fetchLeads]);
 
@@ -119,7 +122,7 @@ export default function LeadCreatorDashboard({ mode }: LeadCreatorDashboardProps
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
           <LeadForm
             lead={null}
-            users={[]}
+            users={agents}
             projects={projects}
             onClose={() => {}}
             onSaved={() => { fetchLeads(); }}
@@ -130,7 +133,7 @@ export default function LeadCreatorDashboard({ mode }: LeadCreatorDashboardProps
         {/* Inbound call modal */}
         <InboundCallModal
           open={showInbound}
-          users={[]}
+          users={agents}
           onClose={() => setShowInbound(false)}
           onCreated={() => { setShowInbound(false); fetchLeads(); }}
         />
@@ -209,7 +212,7 @@ export default function LeadCreatorDashboard({ mode }: LeadCreatorDashboardProps
       <Modal open={showForm} onClose={() => setShowForm(false)} title="New Lead" subtitle="Create a new lead">
         <LeadForm
           lead={null}
-          users={[]}
+          users={agents}
           projects={projects}
           onClose={() => setShowForm(false)}
           onSaved={() => { setShowForm(false); fetchLeads(); }}
