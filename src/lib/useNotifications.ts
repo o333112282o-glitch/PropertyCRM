@@ -6,7 +6,7 @@ import { timeAgo } from '@/lib/utils';
 
 export interface AppNotification {
   id: string;
-  type: 'follow_up' | 'lead_assigned' | 'overdue';
+  type: 'follow_up' | 'lead_assigned' | 'overdue' | 'site_visit';
   title: string;
   body: string;
   leadId?: string;
@@ -83,6 +83,33 @@ export function useNotifications() {
       }
     }
 
+    // Check for upcoming site visits (next 24h)
+    const { data: visitData } = await supabase
+      .from('site_visits')
+      .select('*, leads!inner(client_name, phone, assigned_to)')
+    const visits = (visitData as any[]) || [];
+    for (const visit of visits) {
+      if (visit.status !== 'Scheduled') continue;
+      const visitTime = new Date(visit.visit_date).getTime();
+      const diffH = (visitTime - now) / 3600000;
+      if (diffH >= 0 && diffH <= 24) {
+        const lead = visit.leads;
+        const isAssigned = isAgent && lead?.assigned_to === user.id;
+        const canSee = !isAgent || isAssigned;
+        if (canSee && lead) {
+          newNotifs.push({
+            id: `sitevisit-${visit.id}`,
+            type: 'site_visit',
+            title: 'Site Visit Scheduled',
+            body: `${lead.client_name} — site visit on ${new Date(visit.visit_date).toLocaleDateString()}`,
+            leadId: visit.lead_id,
+            createdAt: now - 500,
+            read: false,
+          });
+        }
+      }
+    }
+
     newNotifs.sort((a, b) => b.createdAt - a.createdAt);
     setNotifications(newNotifs);
   }, [user, isAgent]);
@@ -129,7 +156,19 @@ export function useNotifications() {
       if (!notif.read && !firedRef.current.has(notif.id)) {
         firedRef.current.add(notif.id);
         try {
-          new Notification(notif.title, { body: notif.body, tag: notif.id });
+          const n = new Notification(notif.title, {
+            body: notif.body,
+            tag: notif.id,
+            icon: '/icon.svg',
+            data: { leadId: notif.leadId },
+          });
+          n.onclick = () => {
+            window.focus();
+            if (notif.leadId) {
+              window.postMessage({ type: 'open-lead-detail', leadId: notif.leadId }, '*');
+            }
+            n.close();
+          };
         } catch {
           // ignore
         }

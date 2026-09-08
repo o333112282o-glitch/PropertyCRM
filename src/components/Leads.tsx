@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Plus, Search, Briefcase, Grid3x3, List, Trash2, Edit2, Tag, History, Pencil } from 'lucide-react';
+import { Plus, Search, Briefcase, Grid3x3, List, Trash2, Edit2, Tag, History, Pencil, MapPin, ChevronDown } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth, useVisibleAgentIds } from '@/lib/auth';
 import { useDebouncedRealtimeLeads } from '@/lib/useRealtime';
@@ -13,6 +13,9 @@ import {
   STAGE_COLORS,
   getLeadAging,
   AGING_COLORS,
+  DatePreset,
+  DateRange,
+  getPresetRange,
 } from '@/lib/types';
 import { formatDate, formatDateTime, formatCurrency, timeAgo } from '@/lib/utils';
 import ActionButtons from '@/components/ui/ActionButtons';
@@ -21,6 +24,7 @@ import Modal from '@/components/ui/Modal';
 import LeadForm from '@/components/LeadForm';
 import LogInteractionModal from '@/components/LogInteractionModal';
 import ActivityTimeline from '@/components/ActivityTimeline';
+import DateFilter from '@/components/ui/DateFilter';
 
 interface LeadsProps {
   deepLinkLeadId?: string | null;
@@ -38,6 +42,9 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState<LeadStage | 'all'>('all');
   const [agentFilter, setAgentFilter] = useState<string>('all');
+  const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [datePreset, setDatePreset] = useState<DatePreset>('all');
+  const [customRange, setCustomRange] = useState<DateRange | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Lead | null>(null);
@@ -46,6 +53,12 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [detailTab, setDetailTab] = useState<'edit' | 'activity'>('edit');
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
+
+  const currentRange = useMemo((): DateRange | null => {
+    if (datePreset === 'custom') return customRange;
+    if (datePreset === 'all') return null;
+    return getPresetRange(datePreset);
+  }, [datePreset, customRange]);
 
   const fetchData = useCallback(async () => {
     let query = supabase.from('leads').select('*');
@@ -58,6 +71,9 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
       } else {
         query = query.eq('assigned_to', user!.id);
       }
+    }
+    if (currentRange) {
+      query = query.gte('created_at', currentRange.start.toISOString()).lte('created_at', currentRange.end.toISOString());
     }
     const { data: leadData } = await query.order('updated_at', { ascending: false });
     setLeads((leadData as Lead[]) || []);
@@ -74,7 +90,7 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
     setProjects((projData as Project[]) || []);
 
     setLoading(false);
-  }, [user, isAgent, isManager, getVisibleAgentIds]);
+  }, [user, isAgent, isManager, getVisibleAgentIds, currentRange]);
 
   useEffect(() => {
     fetchData();
@@ -86,6 +102,7 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
     return leads.filter((l) => {
       if (stageFilter !== 'all' && l.stage !== stageFilter) return false;
       if (agentFilter !== 'all' && l.assigned_to !== agentFilter) return false;
+      if (projectFilter !== 'all' && l.project_id !== projectFilter) return false;
       if (search) {
         const q = search.toLowerCase();
         return (
@@ -97,7 +114,7 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
       }
       return true;
     });
-  }, [leads, stageFilter, agentFilter, search]);
+  }, [leads, stageFilter, agentFilter, projectFilter, search]);
 
   const kanbanData = useMemo(() => {
     return LEAD_STAGES.map((stage) => ({
@@ -183,8 +200,8 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Leads Pipeline</h1>
-          <p className="text-gray-500 mt-0.5 text-sm">
+          <h1 className="text-2xl font-bold text-white">Leads Pipeline</h1>
+          <p className="text-slate-400 mt-0.5 text-sm">
             {filteredLeads.length} {filteredLeads.length === 1 ? 'lead' : 'leads'}
           </p>
         </div>
@@ -198,23 +215,23 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
       </div>
 
       {/* Search + filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, phone, requirement..."
-            className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-gray-900 placeholder-gray-400 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition"
+            className="w-full pl-11 pr-4 py-2.5 rounded-xl surface-dark text-slate-200 placeholder-slate-500 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition"
           />
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <select
             value={stageFilter}
             onChange={(e) => setStageFilter(e.target.value as LeadStage | 'all')}
-            className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-gray-900 text-sm font-medium focus:border-[#D4AF37] outline-none transition"
+            className="px-3.5 py-2.5 rounded-xl surface-dark text-slate-200 text-sm font-medium focus:border-[#D4AF37] outline-none transition"
           >
             <option value="all">All Stages</option>
             {LEAD_STAGES.map((s) => (
@@ -226,7 +243,7 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
             <select
               value={agentFilter}
               onChange={(e) => setAgentFilter(e.target.value)}
-              className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-gray-900 text-sm font-medium focus:border-[#D4AF37] outline-none transition"
+              className="px-3.5 py-2.5 rounded-xl surface-dark text-slate-200 text-sm font-medium focus:border-[#D4AF37] outline-none transition"
             >
               <option value="all">All Agents</option>
               {users.filter((u) => u.role === 'agent' || u.role === 'manager').map((u) => (
@@ -237,17 +254,41 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
             </select>
           )}
 
-          <div className="flex rounded-xl border border-slate-200 overflow-hidden">
+          {projects.length > 0 && (
+            <div className="relative">
+              <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <select
+                value={projectFilter}
+                onChange={(e) => setProjectFilter(e.target.value)}
+                className="pl-9 pr-8 py-2.5 rounded-xl surface-dark text-slate-200 text-sm font-medium focus:border-[#D4AF37] outline-none transition appearance-none"
+              >
+                <option value="all">All Projects</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+          )}
+
+          <DateFilter
+            preset={datePreset}
+            range={customRange}
+            onPresetChange={(p) => { setDatePreset(p); }}
+            onCustomRangeChange={(r) => { setCustomRange(r); }}
+          />
+
+          <div className="flex rounded-xl surface-dark overflow-hidden">
             <button
               onClick={() => setView('list')}
-              className={`p-2.5 transition ${view === 'list' ? 'bg-[#1E293B] text-white' : 'bg-white text-gray-400 hover:bg-slate-50'}`}
+              className={`p-2.5 transition ${view === 'list' ? 'bg-[#D4AF37] text-[#0B1120]' : 'text-slate-400 hover:bg-white/5'}`}
               title="List view"
             >
               <List size={18} />
             </button>
             <button
               onClick={() => setView('kanban')}
-              className={`p-2.5 transition ${view === 'kanban' ? 'bg-[#1E293B] text-white' : 'bg-white text-gray-400 hover:bg-slate-50'}`}
+              className={`p-2.5 transition ${view === 'kanban' ? 'bg-[#D4AF37] text-[#0B1120]' : 'text-slate-400 hover:bg-white/5'}`}
               title="Kanban view"
             >
               <Grid3x3 size={18} />
@@ -260,22 +301,27 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
       {view === 'list' && (
         <div className="space-y-2.5">
           {filteredLeads.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
-              <Briefcase size={40} className="mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500 font-medium">No leads found</p>
-              <p className="text-gray-400 text-sm mt-1">Try adjusting your filters or add a new lead</p>
+            <div className="text-center py-16 glass-card">
+              <Briefcase size={40} className="mx-auto text-slate-600 mb-3" />
+              <p className="text-slate-400 font-medium">No leads found</p>
+              <p className="text-slate-600 text-sm mt-1">Try adjusting your filters or add a new lead</p>
             </div>
           ) : (
             filteredLeads.map((lead) => {
               const colors = STAGE_COLORS[lead.stage];
+              const isMissedFollowup = lead.next_followup_at && !['Won', 'Lost'].includes(lead.stage) && new Date(lead.next_followup_at).getTime() < Date.now();
               return (
                 <div
                   key={lead.id}
-                  className="bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md transition group"
+                  className={`rounded-2xl p-4 transition group ${
+                    isMissedFollowup
+                      ? 'glass-card border-red-500/20 hover:border-red-500/40'
+                      : 'glass-card-hover'
+                  }`}
                 >
                   <div className="flex items-start gap-3">
                     {/* Avatar */}
-                    <div className="w-11 h-11 rounded-xl bg-[#1E293B] text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                    <div className="w-11 h-11 rounded-xl bg-[#1E293B] text-white flex items-center justify-center font-bold text-sm flex-shrink-0 border border-white/10">
                       {lead.client_name[0]}
                     </div>
 
@@ -283,15 +329,25 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-gray-900 truncate">{lead.client_name}</h3>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold text-white truncate">{lead.client_name}</h3>
                             {(lead.source_dealer_id || lead.lead_source === 'Dealer Sourced') && (
                               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#F97316] bg-[#F97316]/10 px-1.5 py-0.5 rounded flex-shrink-0">
                                 <Tag size={9} /> Dealer Sourced
                               </span>
                             )}
+                            {!lead.assigned_to && lead.stage === 'New' && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded badge-glow-amber">
+                                Unassigned
+                              </span>
+                            )}
+                            {isMissedFollowup && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-400 bg-red-500/15 px-1.5 py-0.5 rounded badge-glow-red">
+                                Missed Follow-up
+                              </span>
+                            )}
                           </div>
-                          <p className="text-sm text-gray-500 truncate">
+                          <p className="text-sm text-slate-400 truncate">
                             {lead.requirement || 'No requirement specified'}
                           </p>
                         </div>
@@ -311,16 +367,16 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
-                        <span className="font-medium">{lead.phone}</span>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-slate-400">
+                        <span className="font-medium text-slate-300">{lead.phone}</span>
                         {lead.budget_range && <span>{lead.budget_range}</span>}
                         {!isAgent && (
-                          <span className="text-gray-400">
-                            Agent: <span className="text-gray-600 font-medium">{agentName(lead.assigned_to)}</span>
+                          <span className="text-slate-500">
+                            Agent: <span className={`${lead.assigned_to ? 'text-slate-300' : 'text-amber-400'} font-medium`}>{agentName(lead.assigned_to)}</span>
                           </span>
                         )}
                         {lead.next_followup_at && !['Won', 'Lost'].includes(lead.stage) && (
-                          <span className="text-[#F97316] font-medium flex items-center gap-1">
+                          <span className={`${isMissedFollowup ? 'text-red-400' : 'text-orange-400'} font-medium flex items-center gap-1`}>
                             Follow-up: {formatDateTime(lead.next_followup_at)}
                           </span>
                         )}
@@ -332,14 +388,14 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
                     <div className="flex items-center gap-2">
                       {!isAgent && (
                         <div className="relative">
                           <select
                             value={lead.assigned_to || ''}
                             onChange={(e) => handleReassign(lead, e.target.value)}
-                            className="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 font-medium focus:border-[#D4AF37] outline-none transition cursor-pointer"
+                            className="text-xs px-2.5 py-1.5 rounded-lg surface-dark text-slate-300 font-medium focus:border-[#D4AF37] outline-none transition cursor-pointer"
                             title="Reassign lead"
                           >
                             <option value="">Unassigned</option>
@@ -352,21 +408,21 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
                         </div>
                       )}
                       {isAgent && (
-                        <span className="text-xs text-gray-400">Updated {timeAgo(lead.updated_at)}</span>
+                        <span className="text-xs text-slate-500">Updated {timeAgo(lead.updated_at)}</span>
                       )}
                     </div>
 
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleViewDetails(lead)}
-                        className="p-2 rounded-lg text-gray-400 hover:text-[#D4AF37] hover:bg-[#D4AF37]/10 transition"
+                        className="p-2 rounded-lg text-slate-400 hover:text-[#D4AF37] hover:bg-[#D4AF37]/10 transition"
                         title="Activity History"
                       >
                         <History size={16} />
                       </button>
                       <button
                         onClick={() => handleEdit(lead)}
-                        className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-slate-100 transition"
+                        className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition"
                         title="Edit"
                       >
                         <Edit2 size={16} />
@@ -374,7 +430,7 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
                       {canDelete && (
                         <button
                           onClick={() => setConfirmDelete(lead)}
-                          className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                          className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition"
                           title="Delete"
                         >
                           <Trash2 size={16} />
@@ -417,26 +473,26 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <h4 className="font-semibold text-sm text-gray-900 truncate">{lead.client_name}</h4>
+                              <h4 className="font-semibold text-sm text-white truncate">{lead.client_name}</h4>
                               {(lead.source_dealer_id || lead.lead_source === 'Dealer Sourced') && (
                                 <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-[#F97316] bg-[#F97316]/10 px-1 py-0.5 rounded flex-shrink-0">
                                   <Tag size={8} /> Dealer
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-gray-500 truncate">{lead.requirement || '—'}</p>
+                            <p className="text-xs text-slate-400 truncate">{lead.requirement || '—'}</p>
                           </div>
                         </div>
                         {lead.budget_range && (
-                          <p className="text-xs text-gray-600 font-medium mb-2">{lead.budget_range}</p>
+                          <p className="text-xs text-slate-300 font-medium mb-2">{lead.budget_range}</p>
                         )}
                         {!isAgent && (
-                          <p className="text-[10px] text-gray-400 mb-2">
+                          <p className="text-[10px] text-slate-500 mb-2">
                             {agentName(lead.assigned_to)}
                           </p>
                         )}
                         {lead.next_followup_at && !['Won', 'Lost'].includes(lead.stage) && (
-                          <p className="text-[10px] text-[#F97316] font-medium mb-2">
+                          <p className="text-[10px] text-orange-400 font-medium mb-2">
                             {formatDateTime(lead.next_followup_at)}
                           </p>
                         )}
@@ -446,7 +502,7 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
                       </div>
                     ))}
                     {stageLeads.length === 0 && (
-                      <div className="text-center py-6 text-gray-300 text-xs">No leads</div>
+                      <div className="text-center py-6 text-slate-600 text-xs">No leads</div>
                     )}
                   </div>
                 </div>
@@ -465,11 +521,11 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
         size="lg"
       >
         {editingLead && (
-          <div className="flex gap-1 mb-4 p-1 bg-slate-100 rounded-xl w-fit">
+          <div className="flex gap-1 mb-4 p-1 bg-white/5 rounded-xl w-fit">
             <button
               onClick={() => setDetailTab('edit')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                detailTab === 'edit' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                detailTab === 'edit' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <Pencil size={14} />
@@ -478,7 +534,7 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
             <button
               onClick={() => setDetailTab('activity')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                detailTab === 'activity' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                detailTab === 'activity' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <History size={14} />
@@ -527,8 +583,8 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
         title="Delete Lead"
         size="sm"
       >
-        <p className="text-gray-600 mb-5">
-          Are you sure you want to delete <span className="font-semibold text-gray-900">{confirmDelete?.client_name}</span>? This action cannot be undone.
+        <p className="text-slate-400 mb-5">
+          Are you sure you want to delete <span className="font-semibold text-white">{confirmDelete?.client_name}</span>? This action cannot be undone.
         </p>
         <div className="flex gap-3">
           <button
@@ -539,7 +595,7 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
           </button>
           <button
             onClick={() => setConfirmDelete(null)}
-            className="flex-1 py-3 rounded-xl border border-slate-200 text-gray-700 font-semibold hover:bg-slate-50 transition"
+            className="flex-1 py-3 rounded-xl border border-white/10 text-slate-300 font-semibold hover:bg-white/5 transition"
           >
             Cancel
           </button>

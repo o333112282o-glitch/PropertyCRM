@@ -1,15 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, BellRing, X, Clock, UserPlus, AlertTriangle, Check, BellOff } from 'lucide-react';
+import { Bell, BellRing, X, Clock, UserPlus, AlertTriangle, Check, BellOff, Calendar } from 'lucide-react';
 import { useNotifications, AppNotification } from '@/lib/useNotifications';
 import { timeAgo } from '@/lib/utils';
 
 const NOTIF_ICONS: Record<AppNotification['type'], { icon: typeof Clock; color: string; bg: string }> = {
-  follow_up: { icon: Clock, color: 'text-[#F97316]', bg: 'bg-[#F97316]/10' },
-  lead_assigned: { icon: UserPlus, color: 'text-sky-600', bg: 'bg-sky-50' },
-  overdue: { icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
+  follow_up: { icon: Clock, color: 'text-orange-400', bg: 'bg-orange-500/15' },
+  lead_assigned: { icon: UserPlus, color: 'text-sky-400', bg: 'bg-sky-500/15' },
+  overdue: { icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/15' },
+  site_visit: { icon: Calendar, color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
 };
 
-export default function NotificationCenter() {
+interface NotificationCenterProps {
+  onLeadClick?: (leadId: string) => void;
+}
+
+export default function NotificationCenter({ onLeadClick }: NotificationCenterProps) {
   const { notifications, unreadCount, permission, requestPermission, markAllRead } = useNotifications();
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -25,6 +30,13 @@ export default function NotificationCenter() {
   }, [open]);
 
   const BellIcon = unreadCount > 0 ? BellRing : Bell;
+
+  const handleNotifClick = (notif: AppNotification) => {
+    if (notif.leadId && onLeadClick) {
+      onLeadClick(notif.leadId);
+      setOpen(false);
+    }
+  };
 
   return (
     <div className="relative" ref={panelRef}>
@@ -42,11 +54,11 @@ export default function NotificationCenter() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 animate-[fadeIn_.15s_ease-out] overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-[#1E293B]/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 z-50 animate-[fadeIn_.15s_ease-out] overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-gray-900">Notifications</h3>
+              <h3 className="text-sm font-bold text-white">Notifications</h3>
               {unreadCount > 0 && (
                 <span className="text-[10px] font-bold text-white bg-[#F97316] px-1.5 py-0.5 rounded-full">
                   {unreadCount} new
@@ -57,13 +69,13 @@ export default function NotificationCenter() {
               {unreadCount > 0 && (
                 <button
                   onClick={markAllRead}
-                  className="text-xs text-[#F97316] font-semibold hover:underline flex items-center gap-1"
+                  className="text-xs text-[#D4AF37] font-semibold hover:underline flex items-center gap-1"
                 >
                   <Check size={12} />
                   Mark all read
                 </button>
               )}
-              <button onClick={() => setOpen(false)} className="p-1 rounded-lg hover:bg-slate-100 text-gray-400">
+              <button onClick={() => setOpen(false)} className="p-1 rounded-lg hover:bg-white/10 text-slate-400">
                 <X size={16} />
               </button>
             </div>
@@ -71,16 +83,16 @@ export default function NotificationCenter() {
 
           {/* Permission banner */}
           {permission !== 'granted' && 'Notification' in window && (
-            <div className="px-4 py-3 bg-amber-50 border-b border-amber-100">
+            <div className="px-4 py-3 bg-amber-500/10 border-b border-amber-500/20">
               <div className="flex items-start gap-2">
-                <BellOff size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <BellOff size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-xs text-amber-800 font-medium">Enable push notifications</p>
-                  <p className="text-[11px] text-amber-600 mt-0.5">Get alerts for follow-ups and new leads</p>
+                  <p className="text-xs text-amber-300 font-medium">Enable push notifications</p>
+                  <p className="text-[11px] text-amber-400/70 mt-0.5">Get alerts for follow-ups and new leads</p>
                 </div>
                 <button
                   onClick={requestPermission}
-                  className="text-xs font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-2 py-1 rounded-lg transition"
+                  className="text-xs font-bold text-amber-200 bg-amber-500/20 hover:bg-amber-500/30 px-2 py-1 rounded-lg transition"
                 >
                   Enable
                 </button>
@@ -92,29 +104,31 @@ export default function NotificationCenter() {
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="text-center py-10">
-                <Bell size={28} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-sm text-gray-400">No notifications</p>
-                <p className="text-xs text-gray-300 mt-0.5">You're all caught up</p>
+                <Bell size={28} className="mx-auto text-slate-600 mb-2" />
+                <p className="text-sm text-slate-500">No notifications</p>
+                <p className="text-xs text-slate-600 mt-0.5">You're all caught up</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-50">
+              <div className="divide-y divide-white/5">
                 {notifications.map((notif) => {
                   const config = NOTIF_ICONS[notif.type];
                   const Icon = config.icon;
+                  const clickable = !!notif.leadId && !!onLeadClick;
                   return (
                     <div
                       key={notif.id}
-                      className={`flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition ${
-                        !notif.read ? 'bg-[#F97316]/[0.03]' : ''
-                      }`}
+                      onClick={() => clickable && handleNotifClick(notif)}
+                      className={`flex items-start gap-3 px-4 py-3 transition ${
+                        clickable ? 'cursor-pointer hover:bg-white/5' : ''
+                      } ${!notif.read ? 'bg-[#F97316]/[0.05]' : ''}`}
                     >
                       <div className={`w-8 h-8 rounded-lg ${config.bg} ${config.color} flex items-center justify-center flex-shrink-0`}>
                         <Icon size={16} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900">{notif.title}</p>
-                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notif.body}</p>
-                        <p className="text-[10px] text-gray-400 mt-1">{timeAgo(new Date(notif.createdAt).toISOString())}</p>
+                        <p className="text-sm font-semibold text-white">{notif.title}</p>
+                        <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{notif.body}</p>
+                        <p className="text-[10px] text-slate-600 mt-1">{timeAgo(new Date(notif.createdAt).toISOString())}</p>
                       </div>
                       {!notif.read && (
                         <span className="w-2 h-2 rounded-full bg-[#F97316] flex-shrink-0 mt-1.5" />

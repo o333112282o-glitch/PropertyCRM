@@ -31,7 +31,7 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+      <div className="min-h-screen flex items-center justify-center bg-[#0B1120]">
         <div className="w-8 h-8 border-3 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -57,10 +57,19 @@ function AppContent() {
     setPage(p);
   };
 
+  const handleLeadClick = (leadId: string) => {
+    setDeepLinkLeadId(leadId);
+    if (user.role === 'dealer' || user.role === 'dealer_manager') {
+      setPage('dealer-leads');
+    } else {
+      setPage('leads');
+    }
+  };
+
   // Lead Creator routing — restricted UI
   if (user.role === 'lead_creator') {
     return (
-      <Layout currentPage={page} onNavigate={handleNavigate}>
+      <Layout currentPage={page} onNavigate={handleNavigate} onLeadClick={handleLeadClick}>
         {page === 'lc-submit' && <LeadCreatorDashboard mode="submit" />}
         {page === 'lc-leads' && <LeadCreatorDashboard mode="leads" />}
         {page === 'profile' && <Profile />}
@@ -71,7 +80,7 @@ function AppContent() {
   // Dealer & Dealer Manager routing
   if (user.role === 'dealer' || user.role === 'dealer_manager') {
     return (
-      <Layout currentPage={page} onNavigate={handleNavigate}>
+      <Layout currentPage={page} onNavigate={handleNavigate} onLeadClick={handleLeadClick}>
         {page === 'dealer-submit' && <DealerDashboard mode="submit" />}
         {page === 'dealer-leads' && <DealerDashboard mode="leads" deepLinkLeadId={deepLinkLeadId} onDeepLinkConsumed={() => setDeepLinkLeadId(null)} />}
         {page === 'profile' && <Profile />}
@@ -80,7 +89,7 @@ function AppContent() {
   }
 
   return (
-    <Layout currentPage={page} onNavigate={handleNavigate}>
+    <Layout currentPage={page} onNavigate={handleNavigate} onLeadClick={handleLeadClick}>
       {page === 'dashboard' && <Dashboard onNavigate={(p) => setPage(p as Page)} />}
       {page === 'leads' && <Leads deepLinkLeadId={deepLinkLeadId} onDeepLinkConsumed={() => setDeepLinkLeadId(null)} />}
       {page === 'analytics' && <Analytics />}

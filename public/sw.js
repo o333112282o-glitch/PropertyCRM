@@ -1,7 +1,8 @@
 // Property Fy Service Worker — PWA Push Notifications & Deep-Link Routing
 // Handles push events as native system notifications and routes clicks to lead details.
+// Supports: lead_assigned, follow_up, overdue, site_visit
 
-const CACHE_NAME = 'propertyfy-v1';
+const CACHE_NAME = 'propertyfy-v2';
 const STATIC_ASSETS = ['/', '/index.html', '/manifest.json', '/icon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -30,14 +31,30 @@ self.addEventListener('push', (event) => {
   }
 
   const title = data.title || 'Property Fy';
+  const notifType = data.type || 'general';
+
+  // Color-code icon badge by notification type
+  const typeConfig = {
+    lead_assigned: { tag: 'lead', requireInteraction: false },
+    follow_up: { tag: 'followup', requireInteraction: true },
+    overdue: { tag: 'overdue', requireInteraction: true },
+    site_visit: { tag: 'sitevisit', requireInteraction: false },
+    general: { tag: 'general', requireInteraction: false },
+  };
+  const config = typeConfig[notifType] || typeConfig.general;
+
   const options = {
     body: data.body || 'You have a new update',
     icon: '/icon.svg',
     badge: '/icon.svg',
-    data: { leadId: data.leadId || null, url: data.url || '/' },
+    data: {
+      leadId: data.leadId || null,
+      type: notifType,
+      url: data.url || '/',
+    },
     vibrate: [200, 100, 200],
-    tag: data.leadId ? `lead-${data.leadId}` : 'general',
-    requireInteraction: !!data.leadId,
+    tag: data.leadId ? `${config.tag}-${data.leadId}` : config.tag,
+    requireInteraction: config.requireInteraction,
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

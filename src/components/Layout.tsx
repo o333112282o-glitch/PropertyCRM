@@ -25,6 +25,7 @@ interface LayoutProps {
   children: ReactNode;
   currentPage: Page;
   onNavigate: (page: Page) => void;
+  onLeadClick?: (leadId: string) => void;
 }
 
 interface NavItem {
@@ -49,7 +50,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'profile', label: 'Profile', icon: UserCircle },
 ];
 
-export default function Layout({ children, currentPage, onNavigate }: LayoutProps) {
+export default function Layout({ children, currentPage, onNavigate, onLeadClick }: LayoutProps) {
   const { user, logout, isSuperAdmin, isManager, isAgent, isDealer } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -67,7 +68,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
+    <div className="min-h-screen bg-[#0B1120] flex">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 bg-[#1E293B] text-white fixed inset-y-0 left-0 z-30">
         <div className="flex items-center gap-3 px-5 h-16 border-b border-white/10 flex-shrink-0">
@@ -115,7 +116,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
             </div>
             </div>
             <div className="flex-shrink-0">
-              <NotificationCenter />
+              <NotificationCenter onLeadClick={onLeadClick} />
             </div>
           </div>
           <button
@@ -129,7 +130,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
       </aside>
 
       {/* Mobile header */}
-      <div className="lg:hidden fixed top-0 inset-x-0 z-30 h-14 bg-[#1E293B] text-white flex items-center justify-between px-4 shadow-md">
+      <div className="lg:hidden fixed top-0 inset-x-0 z-30 h-14 bg-[#1E293B]/95 backdrop-blur-md text-white flex items-center justify-between px-4 shadow-md border-b border-white/5">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-[#D4AF37] flex items-center justify-center">
             <Building2 size={18} className="text-[#1E293B]" />
@@ -137,7 +138,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
           <span className="text-base font-bold">Property Fy</span>
         </div>
         <div className="flex items-center gap-1">
-          <NotificationCenter />
+          <NotificationCenter onLeadClick={onLeadClick} />
           <button
             onClick={() => setMobileMenuOpen(true)}
             className="p-2 rounded-lg hover:bg-white/10 transition"
@@ -201,13 +202,13 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
 
       {/* Main content */}
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
-        <main className="flex-1 pt-14 lg:pt-0 pb-20 lg:pb-8 px-4 sm:px-6 lg:px-8 py-6">
+        <main className="flex-1 pt-14 lg:pt-0 pb-20 lg:pb-8 px-4 sm:px-6 lg:px-8 py-6 bg-[#0B1120]">
           {children}
         </main>
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 shadow-lg">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-[#1E293B] border-t border-white/10 shadow-lg">
         <div className="flex items-center justify-around h-16 px-1">
           {bottomNavItems.map((item) => {
             const Icon = item.icon;
@@ -217,7 +218,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
                 key={item.key}
                 onClick={() => handleNav(item.key)}
                 className={`flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 rounded-lg transition flex-1 ${
-                  active ? 'text-[#D4AF37]' : 'text-slate-400'
+                  active ? 'text-[#D4AF37]' : 'text-slate-500'
                 }`}
               >
                 <Icon size={22} className={active ? 'fill-[#D4AF37]/10' : ''} />

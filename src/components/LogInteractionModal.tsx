@@ -95,24 +95,24 @@ export default function LogInteractionModal({
   return (
     <Modal open={open} onClose={handleClose} title={title} subtitle={lead.client_name} size="md">
       <form onSubmit={handleSave} className="space-y-4">
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
           <div className={`w-10 h-10 rounded-xl ${iconColor} flex items-center justify-center text-white flex-shrink-0`}>
             <Icon size={20} />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-900">{lead.client_name}</p>
-            <p className="text-xs text-gray-500">{lead.phone}</p>
+            <p className="text-sm font-semibold text-white">{lead.client_name}</p>
+            <p className="text-xs text-slate-400">{lead.phone}</p>
           </div>
         </div>
 
         {error && (
-          <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+          <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
             {error}
           </div>
         )}
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Outcome</label>
+          <label className="block text-sm font-semibold text-slate-300 mb-2">Outcome</label>
           <div className="flex flex-wrap gap-2">
             {INTERACTION_OUTCOMES.map((o) => {
               const active = outcome === o;
@@ -123,8 +123,8 @@ export default function LogInteractionModal({
                   onClick={() => setOutcome(o)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium border transition ${
                     active
-                      ? `${INTERACTION_OUTCOME_COLORS[o]} ring-2 ring-offset-1 ring-current/20`
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                      ? `${INTERACTION_OUTCOME_COLORS[o]} ring-2 ring-offset-1 ring-offset-[#1E293B] ring-current/20`
+                      : 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20'
                   }`}
                 >
                   {o}
@@ -135,7 +135,7 @@ export default function LogInteractionModal({
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+          <label className="block text-sm font-semibold text-slate-300 mb-1.5">
             <StickyNote size={14} className="inline mr-1 -mt-0.5" />
             Notes / Summary
           </label>
@@ -143,13 +143,13 @@ export default function LogInteractionModal({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-gray-900 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition resize-none"
+            className="w-full px-3.5 py-2.5 rounded-xl surface-dark text-slate-200 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition resize-none"
             placeholder="What happened during this interaction?"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+          <label className="block text-sm font-semibold text-slate-300 mb-1.5">
             <Calendar size={14} className="inline mr-1 -mt-0.5" />
             Next Follow-up Date &amp; Time
           </label>
@@ -157,16 +157,16 @@ export default function LogInteractionModal({
             type="datetime-local"
             value={followup}
             onChange={(e) => setFollowup(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-gray-900 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition"
+            className="w-full px-3.5 py-2.5 rounded-xl surface-dark text-slate-200 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition [color-scheme:dark]"
           />
-          <p className="text-xs text-gray-400 mt-1">Optional — set the next follow-up reminder for this lead</p>
+          <p className="text-xs text-slate-500 mt-1">Optional — set the next follow-up reminder for this lead</p>
         </div>
 
         <div className="flex gap-3 pt-2">
           <button
             type="submit"
             disabled={saving}
-            className="flex-1 py-3 rounded-xl bg-[#1E293B] hover:bg-[#334155] text-white font-semibold shadow-lg shadow-[#1E293B]/20 transition active:scale-[.98] disabled:opacity-60 flex items-center justify-center gap-2"
+            className="flex-1 py-3 rounded-xl bg-[#D4AF37] hover:bg-[#c9a232] text-[#1E293B] font-semibold shadow-lg shadow-[#D4AF37]/20 transition active:scale-[.98] disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {saving ? (
               'Saving...'
@@ -180,7 +180,7 @@ export default function LogInteractionModal({
           <button
             type="button"
             onClick={handleClose}
-            className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition"
+            className="flex-1 py-3 rounded-xl border border-white/10 text-slate-300 font-semibold hover:bg-white/5 transition"
           >
             Cancel
           </button>
