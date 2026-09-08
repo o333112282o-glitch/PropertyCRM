@@ -79,8 +79,9 @@ export default function UserManagement() {
       return;
     }
 
-    // Manager is required for ALL roles to satisfy backend constraints.
-    if (!managerId) {
+    // Manager is required for all roles EXCEPT lead_creator.
+    const requiresManager = role !== 'lead_creator';
+    if (requiresManager && !managerId) {
       setFormError('Please select an assigned manager before creating the user.');
       return;
     }
@@ -92,7 +93,7 @@ export default function UserManagement() {
       full_name: fullName.trim() || null,
       mobile: mobile.trim() || null,
       role,
-      manager_id: managerId,
+      manager_id: requiresManager ? managerId : null,
     };
 
     if (password) {
@@ -410,7 +411,14 @@ export default function UserManagement() {
             </div>
           </div>
 
-          <div>
+          {role === 'lead_creator' ? (
+            <div className="px-4 py-3 rounded-xl bg-teal-50 border border-teal-200">
+              <p className="text-sm text-teal-700">
+                Lead Creators are independent — no manager assignment required.
+              </p>
+            </div>
+          ) : (
+            <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 Assigned Manager <span className="text-red-500">*</span>
               </label>
@@ -430,9 +438,10 @@ export default function UserManagement() {
                 ))}
               </select>
               {!managerId && (
-                <p className="text-xs text-red-500 mt-1">A manager is required to create any team member.</p>
+                <p className="text-xs text-red-500 mt-1">A manager is required to create this team member.</p>
               )}
             </div>
+          )}
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
