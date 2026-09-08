@@ -18,18 +18,21 @@ function actionIcon(action: string): typeof Phone {
   if (lower.includes('reassign')) return GitBranch;
   if (lower.includes('delete')) return Trash2;
   if (lower.includes('won') || lower.includes('closed')) return CheckCircle2;
+  if (lower.includes('stage')) return GitBranch;
+  if (lower.includes('site visit')) return CheckCircle2;
   return Edit3;
 }
 
 function actionColor(action: string): string {
   const lower = action.toLowerCase();
-  if (lower.includes('call')) return 'bg-blue-100 text-blue-600';
-  if (lower.includes('whatsapp')) return 'bg-green-100 text-green-600';
-  if (lower.includes('created') || lower.includes('add')) return 'bg-sky-100 text-sky-600';
-  if (lower.includes('reassign')) return 'bg-orange-100 text-orange-600';
-  if (lower.includes('delete')) return 'bg-red-100 text-red-600';
-  if (lower.includes('won') || lower.includes('closed')) return 'bg-[#D4AF37]/15 text-[#a67c00]';
-  return 'bg-slate-100 text-slate-600';
+  if (lower.includes('call')) return 'bg-blue-500/15 text-blue-400';
+  if (lower.includes('whatsapp')) return 'bg-green-500/15 text-green-400';
+  if (lower.includes('created') || lower.includes('add')) return 'bg-sky-500/15 text-sky-400';
+  if (lower.includes('reassign') || lower.includes('stage')) return 'bg-violet-500/15 text-violet-400';
+  if (lower.includes('delete')) return 'bg-red-500/15 text-red-400';
+  if (lower.includes('won') || lower.includes('closed')) return 'bg-emerald-500/15 text-emerald-400';
+  if (lower.includes('site visit')) return 'bg-emerald-500/15 text-emerald-400';
+  return 'bg-slate-500/15 text-slate-400';
 }
 
 export default function ActivityTimeline({ leadId, users, refreshKey }: ActivityTimelineProps) {
@@ -81,8 +84,8 @@ export default function ActivityTimeline({ leadId, users, refreshKey }: Activity
 
   if (logs.length === 0) {
     return (
-      <div className="text-center py-6 text-gray-400">
-        <History size={28} className="mx-auto mb-2 text-gray-300" />
+      <div className="text-center py-6 text-slate-500">
+        <History size={28} className="mx-auto mb-2 text-slate-600" />
         <p className="text-sm">No activity recorded yet</p>
       </div>
     );
@@ -105,7 +108,7 @@ export default function ActivityTimeline({ leadId, users, refreshKey }: Activity
                 <Icon size={14} />
               </div>
               {idx < logs.length - 1 && (
-                <div className="w-0.5 flex-1 bg-slate-200 my-1" />
+                <div className="w-0.5 flex-1 bg-white/10 my-1" />
               )}
             </div>
 
@@ -114,12 +117,12 @@ export default function ActivityTimeline({ leadId, users, refreshKey }: Activity
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-gray-900">{log.action}</span>
+                    <span className="text-sm font-semibold text-white">{log.action}</span>
                     {showBadge && (
                       <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded border ${
                         isCall
-                          ? 'bg-blue-50 text-blue-600 border-blue-200'
-                          : 'bg-green-50 text-green-600 border-green-200'
+                          ? 'bg-blue-500/15 text-blue-400 border-blue-500/20'
+                          : 'bg-green-500/15 text-green-400 border-green-500/20'
                       }`}>
                         {isCall ? <Phone size={9} /> : <MessageCircle size={9} />}
                         {log.action}
@@ -127,12 +130,12 @@ export default function ActivityTimeline({ leadId, users, refreshKey }: Activity
                     )}
                   </div>
                   {log.detail && (
-                    <p className="text-sm text-gray-600 mt-0.5 break-words">{log.detail}</p>
+                    <p className="text-sm text-slate-400 mt-0.5 break-words">{log.detail}</p>
                   )}
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-gray-400">{formatDateTime(log.created_at)}</span>
-                    <span className="text-xs text-gray-400">·</span>
-                    <span className="text-xs text-gray-500 font-medium">{userName(log.user_id)}</span>
+                    <span className="text-xs text-slate-500">{formatDateTime(log.created_at)}</span>
+                    <span className="text-xs text-slate-600">·</span>
+                    <span className="text-xs text-slate-400 font-medium">{userName(log.user_id)}</span>
                   </div>
                 </div>
               </div>

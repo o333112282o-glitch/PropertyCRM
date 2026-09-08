@@ -18,7 +18,7 @@ function AppContent() {
   const [page, setPage] = useState<Page>('dashboard');
   const [deepLinkLeadId, setDeepLinkLeadId] = useState<string | null>(null);
 
-  // Listen for deep-link navigation from PWA push notifications
+  // Listen for deep-link navigation from PWA push notifications and service worker
   useEffect(() => {
     const handler = (e: Event) => {
       const leadId = (e as CustomEvent<string>).detail;
@@ -26,7 +26,19 @@ function AppContent() {
       setPage('leads');
     };
     window.addEventListener('open-lead-detail', handler as EventListener);
-    return () => window.removeEventListener('open-lead-detail', handler as EventListener);
+
+    // Bridge service worker postMessage → custom event
+    const messageHandler = (e: MessageEvent) => {
+      if (e.data && e.data.type === 'open-lead-detail' && e.data.leadId) {
+        window.dispatchEvent(new CustomEvent('open-lead-detail', { detail: e.data.leadId }));
+      }
+    };
+    window.addEventListener('message', messageHandler);
+
+    return () => {
+      window.removeEventListener('open-lead-detail', handler as EventListener);
+      window.removeEventListener('message', messageHandler);
+    };
   }, []);
 
   if (loading) {

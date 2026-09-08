@@ -164,14 +164,23 @@ export default function Leads({ deepLinkLeadId, onDeepLinkConsumed }: LeadsProps
 
   const handleDelete = async () => {
     if (!confirmDelete) return;
-    await supabase.from('activity_logs').delete().eq('lead_id', confirmDelete.id);
-    await supabase.from('leads').delete().eq('id', confirmDelete.id);
+    const { error: logDeleteError } = await supabase.from('activity_logs').delete().eq('lead_id', confirmDelete.id);
+    if (logDeleteError) console.warn('Failed to delete activity logs:', logDeleteError.message);
+    const { error: leadDeleteError } = await supabase.from('leads').delete().eq('id', confirmDelete.id);
+    if (leadDeleteError) {
+      console.warn('Failed to delete lead:', leadDeleteError.message);
+      return;
+    }
     setConfirmDelete(null);
     fetchData();
   };
 
   const handleReassign = async (lead: Lead, newAgentId: string) => {
-    await supabase.from('leads').update({ assigned_to: newAgentId || null }).eq('id', lead.id);
+    const { error: reassignError } = await supabase.from('leads').update({ assigned_to: newAgentId || null }).eq('id', lead.id);
+    if (reassignError) {
+      console.warn('Reassign failed:', reassignError.message);
+      return;
+    }
     await supabase.from('activity_logs').insert({
       lead_id: lead.id,
       user_id: user?.id,

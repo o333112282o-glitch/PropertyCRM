@@ -35,6 +35,7 @@ export default function QuickEditDrawer({ lead, open, projects = [], onClose, on
   const handleSave = async () => {
     setSaving(true);
 
+    const stageChanged = stage !== lead.stage;
     const updates: Record<string, unknown> = {
       stage,
       notes: notes.trim(),
@@ -43,18 +44,34 @@ export default function QuickEditDrawer({ lead, open, projects = [], onClose, on
 
     if (followup) {
       updates.next_followup_at = new Date(followup).toISOString();
-    } else if (stage !== 'Follow-up Date') {
+    } else if (!['Follow-up Date', 'Token Received'].includes(stage)) {
       updates.next_followup_at = null;
     }
 
-    await supabase.from('leads').update(updates).eq('id', lead.id);
+    if (stage === 'Won' || stage === 'Lost') {
+      updates.next_followup_at = null;
+    }
 
-    await supabase.from('activity_logs').insert({
-      lead_id: lead.id,
-      user_id: user?.id,
-      action: 'Quick Edit',
-      detail: `Stage: ${stage}${notes.trim() ? ` | Notes: ${notes.trim().slice(0, 80)}` : ''}`,
-    });
+    const { error: updateError } = await supabase.from('leads').update(updates).eq('id', lead.id);
+    if (updateError) {
+      console.warn('Lead update failed:', updateError.message);
+    }
+
+    if (stageChanged) {
+      await supabase.from('activity_logs').insert({
+        lead_id: lead.id,
+        user_id: user?.id,
+        action: 'Stage Change',
+        detail: `${lead.stage} → ${stage}${notes.trim() ? ` | Notes: ${notes.trim().slice(0, 80)}` : ''}`,
+      });
+    } else {
+      await supabase.from('activity_logs').insert({
+        lead_id: lead.id,
+        user_id: user?.id,
+        action: 'Quick Edit',
+        detail: notes.trim() ? `Notes updated: ${notes.trim().slice(0, 80)}` : 'Lead details updated',
+      });
+    }
 
     setSaving(false);
     onSaved();

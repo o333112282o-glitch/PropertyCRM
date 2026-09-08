@@ -57,6 +57,7 @@ export default function LogInteractionModal({
     if (notes.trim()) detailParts.push(`Notes: ${notes.trim()}`);
     if (followup) detailParts.push(`Next follow-up: ${new Date(followup).toLocaleString()}`);
 
+    // Step 1: Insert the activity log first — this is the primary action
     const { error: logError } = await supabase.from('activity_logs').insert({
       lead_id: lead.id,
       user_id: user?.id || null,
@@ -70,11 +71,35 @@ export default function LogInteractionModal({
       return;
     }
 
+    // Step 2: Update lead fields — call_outcome + follow-up date
+    const leadUpdates: Record<string, unknown> = { call_outcome: outcome };
     if (followup) {
-      await supabase
-        .from('leads')
-        .update({ next_followup_at: new Date(followup).toISOString() })
-        .eq('id', lead.id);
+      leadUpdates.next_followup_at = new Date(followup).toISOString();
+    }
+
+    // Stage transition: if lead is "New" and this is a call, move to "Attempt"
+    if (isCall && lead.stage === 'New') {
+      leadUpdates.stage = 'Attempt';
+    }
+
+    const { error: leadUpdateError } = await supabase
+      .from('leads')
+      .update(leadUpdates)
+      .eq('id', lead.id);
+
+    if (leadUpdateError) {
+      // Log still succeeded, but warn that follow-up date may not have saved
+      console.warn('Lead update failed after log insert:', leadUpdateError.message);
+    }
+
+    // Step 3: Log the stage transition if it changed
+    if (leadUpdates.stage && leadUpdates.stage !== lead.stage) {
+      await supabase.from('activity_logs').insert({
+        lead_id: lead.id,
+        user_id: user?.id || null,
+        action: 'Stage Change',
+        detail: `${lead.stage} → ${leadUpdates.stage as string} (auto: call logged)`,
+      });
     }
 
     setSaving(false);
@@ -161,6 +186,12 @@ export default function LogInteractionModal({
           />
           <p className="text-xs text-slate-500 mt-1">Optional — set the next follow-up reminder for this lead</p>
         </div>
+
+        {isCall && lead.stage === 'New' && (
+          <p className="text-xs text-sky-400/70 bg-sky-500/10 rounded-lg px-3 py-2 border border-sky-500/20">
+            Logging a call will automatically move this lead from "New" to "Attempt".
+          </p>
+        )}
 
         <div className="flex gap-3 pt-2">
           <button
