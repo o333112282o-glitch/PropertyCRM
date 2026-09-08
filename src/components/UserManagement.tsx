@@ -87,14 +87,10 @@ export default function UserManagement() {
 
     setSaving(true);
 
-    // Auto-generate fallback email if Supabase requires an email column.
-    const fallbackEmail = `${username.trim().toLowerCase().replace(/[^a-z0-9]/g, '')}@propertyfy.app`;
-
     const payload: Record<string, unknown> = {
       username: username.trim(),
       full_name: fullName.trim() || null,
       mobile: mobile.trim() || null,
-      email: fallbackEmail,
       role,
       manager_id: managerId,
     };
@@ -105,8 +101,6 @@ export default function UserManagement() {
 
     let result;
     if (editingUser) {
-      // Only set email on create, not on edit (preserve existing)
-      delete payload.email;
       result = await supabase.from('users').update(payload).eq('id', editingUser.id);
     } else {
       payload.password_hash = hashPassword(password);
@@ -118,8 +112,6 @@ export default function UserManagement() {
         const msg = result.error.message.toLowerCase();
         if (msg.includes('mobile') || msg.includes('phone')) {
           setFormError('This mobile number is already registered. Use a different number.');
-        } else if (msg.includes('email')) {
-          setFormError('This email is already in use. Try a different username.');
         } else {
           setFormError('This username already exists. Choose a different one.');
         }
