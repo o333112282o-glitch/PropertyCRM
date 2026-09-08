@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Plus, Trash2, Edit2, Search, UserCog, Shield, User as UserIcon, Store, Users, ClipboardList, Handshake } from 'lucide-react';
+import { Plus, Trash2, Edit2, Search, UserCog, Shield, User as UserIcon, Store, Users, ClipboardList, Handshake, UserPlus, Ban, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { User, UserRole, ROLE_LABELS, ROLE_COLORS, getPresence, PRESENCE_COLORS, PRESENCE_LABELS } from '@/lib/types';
@@ -123,6 +123,12 @@ export default function UserManagement() {
     fetchUsers();
   };
 
+  const toggleDisable = async (u: User) => {
+    const newVal = !u.is_disabled;
+    await supabase.from('users').update({ is_disabled: newVal }).eq('id', u.id);
+    fetchUsers();
+  };
+
   const filteredUsers = useMemo(() => users.filter((u) => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -143,6 +149,7 @@ export default function UserManagement() {
     if (r === 'manager') return UserCog;
     if (r === 'dealer') return Store;
     if (r === 'dealer_manager') return Handshake;
+    if (r === 'lead_creator') return UserPlus;
     return UserIcon;
   };
 
@@ -215,6 +222,7 @@ export default function UserManagement() {
               const isSelf = u.id === currentUser?.id;
               const presence = getPresence(u.last_active_at);
               const isTeamMember = u.role === 'agent' || u.role === 'manager';
+              const isDisabled = !!u.is_disabled;
               return (
                 <div key={u.id} className="bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md transition">
                   <div className="flex items-center gap-3">
@@ -224,8 +232,9 @@ export default function UserManagement() {
                         u.role === 'manager' ? 'bg-orange-50 text-orange-600' :
                         u.role === 'dealer' ? 'bg-slate-100 text-slate-600' :
                         u.role === 'dealer_manager' ? 'bg-purple-50 text-purple-600' :
+                        u.role === 'lead_creator' ? 'bg-teal-50 text-teal-600' :
                         'bg-sky-50 text-sky-600'
-                      }`}>
+                      } ${isDisabled ? 'opacity-40' : ''}`}>
                         {u.full_name?.[0] || u.username[0].toUpperCase()}
                       </div>
                       {isTeamMember && (
@@ -258,6 +267,9 @@ export default function UserManagement() {
                         <span>@{u.username}</span>
                         {u.mobile && <span>{u.mobile}</span>}
                         <span>Joined {formatDate(u.created_at)}</span>
+                        {isDisabled && (
+                          <span className="font-semibold text-red-500">Disabled</span>
+                        )}
                         {isTeamMember && u.last_login_at && (
                           <span className="text-gray-400">Last login: {formatDateTime(u.last_login_at)}</span>
                         )}
@@ -270,6 +282,19 @@ export default function UserManagement() {
                     </span>
 
                     <div className="flex items-center gap-1">
+                      {!isSelf && u.role !== 'super_admin' && (
+                        <button
+                          onClick={() => toggleDisable(u)}
+                          className={`p-2 rounded-lg transition ${
+                            isDisabled
+                              ? 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'
+                              : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
+                          }`}
+                          title={isDisabled ? 'Enable user' : 'Disable user'}
+                        >
+                          {isDisabled ? <CheckCircle2 size={16} /> : <Ban size={16} />}
+                        </button>
+                      )}
                       <button
                         onClick={() => openEdit(u)}
                         className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-slate-100 transition"
@@ -366,6 +391,7 @@ export default function UserManagement() {
                 <option value="manager">Sales Manager</option>
                 <option value="dealer">Dealer</option>
                 <option value="dealer_manager">Dealer Manager</option>
+                <option value="lead_creator">Lead Creator</option>
                 {currentUser?.role === 'super_admin' && (
                   <option value="super_admin">Super Admin</option>
                 )}

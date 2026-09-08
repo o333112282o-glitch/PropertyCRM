@@ -11,6 +11,7 @@ import {
 } from '@/lib/types';
 import { useDebouncedRealtimeLeads } from '@/lib/useRealtime';
 import LeadForm from '@/components/LeadForm';
+import DuplicateApprovalModal from '@/components/DuplicateApprovalModal';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
 import ActionButtons from '@/components/ui/ActionButtons';
@@ -101,42 +102,16 @@ export default function DealerDashboard({ mode, deepLinkLeadId, onDeepLinkConsum
           />
         </div>
 
-        {/* Duplicate phone alert */}
-        <Modal
+        {/* Duplicate approval request */}
+        <DuplicateApprovalModal
           open={!!duplicateLead}
+          existingLead={duplicateLead}
+          phone={duplicateLead?.phone || ''}
+          clientName={duplicateLead?.client_name || ''}
+          projects={projects}
           onClose={() => setDuplicateLead(null)}
-          title="Duplicate Lead Found"
-          size="sm"
-        >
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
-              <AlertTriangle size={24} className="text-amber-600 flex-shrink-0" />
-              <p className="text-sm text-amber-800">
-                A lead with phone number <span className="font-bold">{duplicateLead?.phone}</span> already exists.
-              </p>
-            </div>
-            <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-              <p className="text-sm font-semibold text-gray-900">{duplicateLead?.client_name}</p>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Stage: {duplicateLead?.stage} · Submitted {duplicateLead ? timeAgo(duplicateLead.created_at) : ''}
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDuplicateLead(null)}
-                className="flex-1 py-3 rounded-xl bg-[#1E293B] hover:bg-[#334155] text-white font-semibold transition"
-              >
-                View in My Leads
-              </button>
-              <button
-                onClick={() => setDuplicateLead(null)}
-                className="flex-1 py-3 rounded-xl border border-slate-200 text-gray-700 font-semibold hover:bg-slate-50 transition"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </Modal>
+          onSubmitted={() => { setDuplicateLead(null); fetchLeads(); }}
+        />
       </div>
     );
   }
@@ -265,42 +240,16 @@ export default function DealerDashboard({ mode, deepLinkLeadId, onDeepLinkConsum
         />
       </Modal>
 
-      {/* Duplicate phone alert */}
-      <Modal
+      {/* Duplicate approval request */}
+      <DuplicateApprovalModal
         open={!!duplicateLead}
+        existingLead={duplicateLead}
+        phone={duplicateLead?.phone || ''}
+        clientName={duplicateLead?.client_name || ''}
+        projects={projects}
         onClose={() => setDuplicateLead(null)}
-        title="Duplicate Lead Found"
-        size="sm"
-      >
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
-            <AlertTriangle size={24} className="text-amber-600 flex-shrink-0" />
-            <p className="text-sm text-amber-800">
-              A lead with phone number <span className="font-bold">{duplicateLead?.phone}</span> already exists.
-            </p>
-          </div>
-          <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-            <p className="text-sm font-semibold text-gray-900">{duplicateLead?.client_name}</p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Stage: {duplicateLead?.stage} · Submitted {duplicateLead ? timeAgo(duplicateLead.created_at) : ''}
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setDuplicateLead(null)}
-              className="flex-1 py-3 rounded-xl bg-[#1E293B] hover:bg-[#334155] text-white font-semibold transition"
-            >
-              Got it
-            </button>
-            <button
-              onClick={() => setDuplicateLead(null)}
-              className="flex-1 py-3 rounded-xl border border-slate-200 text-gray-700 font-semibold hover:bg-slate-50 transition"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </Modal>
+        onSubmitted={() => { setDuplicateLead(null); fetchLeads(); }}
+      />
     </div>
   );
 }

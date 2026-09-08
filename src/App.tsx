@@ -9,6 +9,7 @@ import UserManagement from '@/components/UserManagement';
 import ProjectsManagement from '@/components/ProjectsManagement';
 import Profile from '@/components/Profile';
 import DealerDashboard from '@/components/DealerDashboard';
+import LeadCreatorDashboard from '@/components/LeadCreatorDashboard';
 import NotificationsPage from '@/components/NotificationsPage';
 import ActivityLogsPage from '@/components/ActivityLogsPage';
 
@@ -49,8 +50,23 @@ function AppContent() {
       setPage('dealer-submit');
       return;
     }
+    if (p === 'dashboard' && user.role === 'lead_creator') {
+      setPage('lc-submit');
+      return;
+    }
     setPage(p);
   };
+
+  // Lead Creator routing — restricted UI
+  if (user.role === 'lead_creator') {
+    return (
+      <Layout currentPage={page} onNavigate={handleNavigate}>
+        {page === 'lc-submit' && <LeadCreatorDashboard mode="submit" />}
+        {page === 'lc-leads' && <LeadCreatorDashboard mode="leads" />}
+        {page === 'profile' && <Profile />}
+      </Layout>
+    );
+  }
 
   // Dealer & Dealer Manager routing
   if (user.role === 'dealer' || user.role === 'dealer_manager') {

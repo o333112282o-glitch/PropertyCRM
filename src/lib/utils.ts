@@ -3,6 +3,11 @@ export function cleanPhone(phone: string): string {
   return phone.replace(/[^0-9]/g, '');
 }
 
+/** Normalize a phone number to digits-only for dedup matching. */
+export function normalizeMobile(phone: string): string {
+  return phone.replace(/[^0-9]/g, '');
+}
+
 /** WhatsApp link: wa.me/<digits> */
 export function whatsappLink(phone: string): string {
   return `https://wa.me/${cleanPhone(phone)}`;

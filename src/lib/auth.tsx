@@ -14,6 +14,7 @@ interface AuthContextValue {
   isAgent: boolean;
   isDealer: boolean;
   isDealerManager: boolean;
+  isLeadCreator: boolean;
   canDelete: boolean;
   canExport: boolean;
   canManageUsers: boolean;
@@ -62,6 +63,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!data || data.password_hash !== hash) {
       return { error: 'Invalid username or password' };
+    }
+
+    if ((data as User & { is_disabled?: boolean }).is_disabled) {
+      return { error: 'This account has been disabled. Contact your administrator.' };
     }
 
     const loggedInUser = data as User;
@@ -136,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAgent = user?.role === 'agent';
   const isDealer = user?.role === 'dealer';
   const isDealerManager = user?.role === 'dealer_manager';
+  const isLeadCreator = user?.role === 'lead_creator';
 
   return (
     <AuthContext.Provider
@@ -150,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAgent,
         isDealer,
         isDealerManager,
+        isLeadCreator,
         canDelete: isSuperAdmin,
         canExport: isSuperAdmin || isManager,
         canManageUsers: isSuperAdmin,

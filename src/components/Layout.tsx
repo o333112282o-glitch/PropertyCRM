@@ -19,7 +19,7 @@ import { useAuth } from '@/lib/auth';
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/types';
 import NotificationCenter from '@/components/NotificationCenter';
 
-export type Page = 'dashboard' | 'leads' | 'analytics' | 'users' | 'projects' | 'profile' | 'dealer-submit' | 'dealer-leads' | 'notifications' | 'activity-logs';
+export type Page = 'dashboard' | 'leads' | 'analytics' | 'users' | 'projects' | 'profile' | 'dealer-submit' | 'dealer-leads' | 'notifications' | 'activity-logs' | 'lc-submit' | 'lc-leads';
 
 interface LayoutProps {
   children: ReactNode;
@@ -44,6 +44,8 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'notifications', label: 'Notifications', icon: Bell, roles: ['super_admin', 'manager', 'agent'] },
   { key: 'dealer-submit', label: 'Submit Lead', icon: PlusCircle, roles: ['dealer', 'dealer_manager'] },
   { key: 'dealer-leads', label: 'My Leads', icon: Briefcase, roles: ['dealer', 'dealer_manager'] },
+  { key: 'lc-submit', label: 'Quick Entry', icon: PlusCircle, roles: ['lead_creator'] },
+  { key: 'lc-leads', label: 'My Leads', icon: Briefcase, roles: ['lead_creator'] },
   { key: 'profile', label: 'Profile', icon: UserCircle },
 ];
 

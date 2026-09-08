@@ -1,4 +1,4 @@
-export type UserRole = 'super_admin' | 'manager' | 'agent' | 'dealer' | 'dealer_manager';
+export type UserRole = 'super_admin' | 'manager' | 'agent' | 'dealer' | 'dealer_manager' | 'lead_creator';
 
 export interface User {
   id: string;
@@ -8,6 +8,7 @@ export interface User {
   mobile: string | null;
   full_name: string | null;
   manager_id: string | null;
+  is_disabled: boolean;
   created_at: string;
   last_login_at: string | null;
   last_active_at: string | null;
@@ -65,6 +66,12 @@ export interface Lead {
   source_dealer_id: string | null;
   project_id: string | null;
   dealer_id: string | null;
+  created_by: string | null;
+  normalized_mobile: string | null;
+  lost_reason: string | null;
+  booking_amount: number | null;
+  booking_date: string | null;
+  payment_mode: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -273,6 +280,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   agent: 'Sales Agent',
   dealer: 'Dealer',
   dealer_manager: 'Dealer Manager',
+  lead_creator: 'Lead Creator',
 };
 
 export const ROLE_COLORS: Record<UserRole, string> = {
@@ -281,4 +289,22 @@ export const ROLE_COLORS: Record<UserRole, string> = {
   agent: 'bg-sky-50 text-sky-700 border-sky-200',
   dealer: 'bg-slate-100 text-slate-700 border-slate-300',
   dealer_manager: 'bg-purple-50 text-purple-700 border-purple-200',
+  lead_creator: 'bg-teal-50 text-teal-700 border-teal-200',
 };
+
+// ── Duplicate Approval Requests ───────────────────────────────
+export type DuplicateRequestStatus = 'pending_approval' | 'approved' | 'rejected';
+
+export interface DuplicateApprovalRequest {
+  id: string;
+  lead_name: string;
+  mobile_number: string;
+  project_id: string | null;
+  requested_by: string | null;
+  assigned_agent_id: string | null;
+  source: string;
+  status: DuplicateRequestStatus;
+  approved_by: string | null;
+  approved_at: string | null;
+  created_at: string;
+}

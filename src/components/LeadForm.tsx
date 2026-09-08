@@ -14,7 +14,7 @@ import {
   STAGE_COLORS,
   CALL_OUTCOME_COLORS,
 } from '@/lib/types';
-import { toDateTimeLocal } from '@/lib/utils';
+import { toDateTimeLocal, normalizeMobile } from '@/lib/utils';
 import { Phone, PhoneOff, XCircle, Frown, Clock3, ThumbsUp } from 'lucide-react';
 
 interface LeadFormProps {
@@ -90,12 +90,14 @@ export default function LeadForm({ lead, users, projects = [], onClose, onSaved,
 
     setSaving(true);
 
-    // Duplicate phone check for new leads
+    // Duplicate phone check for new leads (normalized mobile)
     if (!lead && onDuplicatePhone) {
+      const normalized = normalizeMobile(phone);
       const { data: existing } = await supabase
         .from('leads')
         .select('*')
-        .eq('phone', phone.trim())
+        .or(`phone.eq.${phone.trim()},normalized_mobile.eq.${normalized}`)
+        .in('stage', ['New', 'Attempt', 'Follow-up Date', 'Negotiate', 'Token Received'])
         .maybeSingle();
       if (existing) {
         setSaving(false);
@@ -123,6 +125,8 @@ export default function LeadForm({ lead, users, projects = [], onClose, onSaved,
       notes: notes.trim(),
       call_outcome: callOutcome || null,
       project_id: projectId || null,
+      normalized_mobile: normalizeMobile(phone),
+      created_by: user?.id || null,
     };
 
     // Tag dealer-sourced leads and bind dealer_id permanently
