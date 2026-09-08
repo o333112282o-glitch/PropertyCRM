@@ -14,7 +14,7 @@ import {
   getLeadAging,
   DatePreset, DateRange, getPresetRange,
 } from '@/lib/types';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, isCallAction, isWhatsAppAction, isUpdateAction } from '@/lib/utils';
 import DateFilter from '@/components/ui/DateFilter';
 
 interface ActivityLog {
@@ -192,7 +192,11 @@ export default function Analytics() {
           .reduce((sum, l) => sum + (l.token_amount || 0), 0);
 
         const callsMade = activityLogs.filter(
-          (log) => agentLeadIds.has(log.lead_id) && log.action.toLowerCase().includes('call')
+          (log) => agentLeadIds.has(log.lead_id) && isCallAction(log.action)
+        ).length;
+
+        const whatsappSent = activityLogs.filter(
+          (log) => agentLeadIds.has(log.lead_id) && isWhatsAppAction(log.action)
         ).length;
 
         // Meetings/Visits conducted
@@ -212,6 +216,7 @@ export default function Analytics() {
           total: agentLeads.length,
           won, token,
           callsMade,
+          whatsappSent,
           meetingsVisits,
           overdueFollowups,
           conversion: agentLeads.length > 0 ? ((won / agentLeads.length) * 100).toFixed(0) : '0',
@@ -545,6 +550,7 @@ export default function Analytics() {
               <div className="grid grid-cols-3 gap-2 text-center">
                 <Stat label="Assigned" value={row.total.toString()} />
                 <Stat label="Calls" value={row.callsMade.toString()} color="text-blue-600" />
+                <Stat label="WhatsApp" value={row.whatsappSent.toString()} color="text-green-600" />
                 <Stat label="Mtgs/Visits" value={row.meetingsVisits.toString()} color="text-violet-600" />
                 <Stat label="Won" value={row.won.toString()} color="text-emerald-600" />
                 <Stat label="Conv." value={`${row.conversion}%`} color="text-[#a67c00]" />
@@ -580,6 +586,7 @@ export default function Analytics() {
                 <th className="pb-3 pr-4 font-semibold">Agent Name</th>
                 <th className="pb-3 pr-4 font-semibold text-center">Assigned</th>
                 <th className="pb-3 pr-4 font-semibold text-center">Calls Made</th>
+                <th className="pb-3 pr-4 font-semibold text-center">WhatsApp</th>
                 <th className="pb-3 pr-4 font-semibold text-center">Mtgs/Visits</th>
                 <th className="pb-3 pr-4 font-semibold text-center">Overdue</th>
                 <th className="pb-3 pr-4 font-semibold text-center">Won</th>
@@ -609,6 +616,7 @@ export default function Analytics() {
                   </td>
                   <td className="py-3 pr-4 text-center font-medium text-slate-600">{row.total}</td>
                   <td className="py-3 pr-4 text-center font-medium text-blue-600">{row.callsMade}</td>
+                  <td className="py-3 pr-4 text-center font-medium text-green-600">{row.whatsappSent}</td>
                   <td className="py-3 pr-4 text-center font-medium text-violet-600">{row.meetingsVisits}</td>
                   <td className="py-3 pr-4 text-center">
                     {row.overdueFollowups > 0 ? (

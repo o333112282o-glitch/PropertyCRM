@@ -17,10 +17,16 @@ export function useRealtimeLeads(onChange: () => void) {
   useEffect(() => {
     channel.current = supabase
       .channel('leads-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
         callbackRef.current();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'activity_logs' }, () => {
+        callbackRef.current();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'session_logs' }, () => {
+        callbackRef.current();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
         callbackRef.current();
       })
       .subscribe();

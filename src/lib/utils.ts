@@ -87,3 +87,36 @@ export function timeAgo(dateStr: string): string {
   if (days < 30) return `${days}d ago`;
   return formatDate(dateStr);
 }
+
+// ── Activity Categorization ──────────────────────────────────
+// Shared helpers so all components classify activity log entries
+// the same way for CALLS, WHATSAPP, and UPDATES counters.
+
+/** True if the action represents a call interaction. */
+export function isCallAction(action: string): boolean {
+  return action.toLowerCase().includes('call');
+}
+
+/** True if the action represents a WhatsApp interaction. */
+export function isWhatsAppAction(action: string): boolean {
+  return action.toLowerCase().includes('whatsapp');
+}
+
+/** True if the action represents a lead update (stage change, site visit, follow-up note, lead creation, reassignment, quick edit). */
+export function isUpdateAction(action: string): boolean {
+  const a = action.toLowerCase();
+  return (
+    a.includes('updated') ||
+    a.includes('quick edit') ||
+    a.includes('reassign') ||
+    a.includes('stage') ||
+    a.includes('site visit') ||
+    a.includes('follow') ||
+    a.includes('created') ||
+    a.includes('add') ||
+    a.includes('meeting') ||
+    a.includes('won') ||
+    a.includes('closed') ||
+    a.includes('assigned')
+  );
+}

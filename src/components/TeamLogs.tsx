@@ -1,8 +1,9 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useDebouncedRealtimeLeads } from '@/lib/useRealtime';
 import { User, SessionLog } from '@/lib/types';
-import { formatDateTime, formatDate } from '@/lib/utils';
-import { Clock, Phone, Edit3, LogIn, LogOut, Calendar } from 'lucide-react';
+import { formatDateTime, formatDate, isCallAction, isWhatsAppAction, isUpdateAction } from '@/lib/utils';
+import { Clock, Phone, MessageCircle, Edit3, LogIn, LogOut, Calendar } from 'lucide-react';
 
 interface TeamLogsProps {
   users: User[];
@@ -14,6 +15,7 @@ interface AgentDayStat {
   logoutTime: string | null;
   activeHours: string;
   callsLogged: number;
+  whatsappLogged: number;
   leadsUpdated: number;
 }
 
@@ -23,31 +25,34 @@ export default function TeamLogs({ users }: TeamLogsProps) {
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState<string>(new Date().toISOString().slice(0, 10));
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const dayStart = new Date(dateFilter + 'T00:00:00');
-      const dayEnd = new Date(dateFilter + 'T23:59:59');
+  const fetchData = useCallback(async () => {
+    const dayStart = new Date(dateFilter + 'T00:00:00');
+    const dayEnd = new Date(dateFilter + 'T23:59:59');
 
-      const { data: sessionData } = await supabase
-        .from('session_logs')
-        .select('*')
-        .gte('login_at', dayStart.toISOString())
-        .lte('login_at', dayEnd.toISOString())
-        .order('login_at', { ascending: true });
+    const { data: sessionData } = await supabase
+      .from('session_logs')
+      .select('*')
+      .gte('login_at', dayStart.toISOString())
+      .lte('login_at', dayEnd.toISOString())
+      .order('login_at', { ascending: true });
 
-      setSessions((sessionData as SessionLog[]) || []);
+    setSessions((sessionData as SessionLog[]) || []);
 
-      const { data: actData } = await supabase
-        .from('activity_logs')
-        .select('user_id, action, created_at')
-        .gte('created_at', dayStart.toISOString())
-        .lte('created_at', dayEnd.toISOString());
+    const { data: actData } = await supabase
+      .from('activity_logs')
+      .select('user_id, action, created_at')
+      .gte('created_at', dayStart.toISOString())
+      .lte('created_at', dayEnd.toISOString());
 
-      setActivityLogs((actData as { user_id: string | null; action: string; created_at: string }[]) || []);
-      setLoading(false);
-    };
-    fetchData();
+    setActivityLogs((actData as { user_id: string | null; action: string; created_at: string }[]) || []);
+    setLoading(false);
   }, [dateFilter]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useDebouncedRealtimeLeads(fetchData, 300);
 
   const teamMembers = useMemo(() => users.filter((u) => u.role === 'agent' || u.role === 'manager'), [users]);
 
@@ -71,12 +76,9 @@ export default function TeamLogs({ users }: TeamLogsProps) {
       const activeHours = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
 
       const memberActivity = activityLogs.filter((a) => a.user_id === member.id);
-      const callsLogged = memberActivity.filter((a) => a.action.toLowerCase().includes('call')).length;
-      const leadsUpdated = memberActivity.filter((a) =>
-        a.action.toLowerCase().includes('updated') ||
-        a.action.toLowerCase().includes('quick edit') ||
-        a.action.toLowerCase().includes('reassign')
-      ).length;
+      const callsLogged = memberActivity.filter((a) => isCallAction(a.action)).length;
+      const whatsappLogged = memberActivity.filter((a) => isWhatsAppAction(a.action)).length;
+      const leadsUpdated = memberActivity.filter((a) => isUpdateAction(a.action)).length;
 
       return {
         user: member,
@@ -84,6 +86,7 @@ export default function TeamLogs({ users }: TeamLogsProps) {
         logoutTime: lastLogout,
         activeHours,
         callsLogged,
+        whatsappLogged,
         leadsUpdated,
       };
     });
@@ -134,6 +137,9 @@ export default function TeamLogs({ users }: TeamLogsProps) {
                   <Phone size={12} className="inline mr-1 -mt-0.5" /> Calls
                 </th>
                 <th className="text-center px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  <MessageCircle size={12} className="inline mr-1 -mt-0.5" /> WhatsApp
+                </th>
+                <th className="text-center px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
                   <Edit3 size={12} className="inline mr-1 -mt-0.5" /> Updates
                 </th>
               </tr>
@@ -170,6 +176,11 @@ export default function TeamLogs({ users }: TeamLogsProps) {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-green-50 text-green-600 text-sm font-bold">
+                      {stat.whatsappLogged}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
                     <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold">
                       {stat.leadsUpdated}
                     </span>
@@ -178,7 +189,7 @@ export default function TeamLogs({ users }: TeamLogsProps) {
               ))}
               {stats.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-gray-400 text-sm">
+                  <td colSpan={7} className="text-center py-10 text-gray-400 text-sm">
                     No team members found
                   </td>
                 </tr>

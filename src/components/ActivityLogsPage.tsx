@@ -10,7 +10,7 @@ import {
   PRESENCE_COLORS,
   PRESENCE_LABELS,
 } from '@/lib/types';
-import { formatDateTime, formatDate, timeAgo } from '@/lib/utils';
+import { formatDateTime, formatDate, timeAgo, isCallAction, isWhatsAppAction, isUpdateAction } from '@/lib/utils';
 import {
   Clock,
   Phone,
@@ -135,13 +135,9 @@ export default function ActivityLogsPage() {
       const activeHours = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
 
       const memberActivity = activityLogs.filter((a) => a.user_id === member.id);
-      const callsLogged = memberActivity.filter((a) => a.action.toLowerCase().includes('call')).length;
-      const whatsappLogged = memberActivity.filter((a) => a.action.toLowerCase().includes('whatsapp')).length;
-      const leadsUpdated = memberActivity.filter((a) =>
-        a.action.toLowerCase().includes('updated') ||
-        a.action.toLowerCase().includes('quick edit') ||
-        a.action.toLowerCase().includes('reassign')
-      ).length;
+      const callsLogged = memberActivity.filter((a) => isCallAction(a.action)).length;
+      const whatsappLogged = memberActivity.filter((a) => isWhatsAppAction(a.action)).length;
+      const leadsUpdated = memberActivity.filter((a) => isUpdateAction(a.action)).length;
 
       const presence = getPresence(member.last_active_at);
 
@@ -221,6 +217,28 @@ export default function ActivityLogsPage() {
             <PresenceCard label="Online" count={onlineCount} color="emerald" />
             <PresenceCard label="Idle" count={idleCount} color="amber" />
             <PresenceCard label="Offline" count={teamMembers.length - onlineCount - idleCount} color="slate" />
+          </div>
+
+          {/* Team activity counters (live) */}
+          <div className="grid grid-cols-3 gap-3">
+            <ActivityCounterCard
+              label="Calls"
+              count={agentStats.reduce((sum, s) => sum + s.callsLogged, 0)}
+              icon={Phone}
+              color="bg-blue-50 text-blue-600"
+            />
+            <ActivityCounterCard
+              label="WhatsApp"
+              count={agentStats.reduce((sum, s) => sum + s.whatsappLogged, 0)}
+              icon={MessageCircle}
+              color="bg-green-50 text-green-600"
+            />
+            <ActivityCounterCard
+              label="Updates"
+              count={agentStats.reduce((sum, s) => sum + s.leadsUpdated, 0)}
+              icon={Edit3}
+              color="bg-slate-100 text-slate-600"
+            />
           </div>
 
           {/* Agent list with presence */}
@@ -473,6 +491,20 @@ function PresenceCard({ label, count, color }: { label: string; count: number; c
         <span className={`text-xs font-bold ${c.text} uppercase tracking-wider`}>{label}</span>
       </div>
       <p className="text-2xl font-bold text-gray-900">{count}</p>
+    </div>
+  );
+}
+
+function ActivityCounterCard({ label, count, icon: Icon, color }: { label: string; count: number; icon: typeof Phone; color: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 flex items-center gap-3">
+      <div className={`w-9 h-9 rounded-xl ${color} flex items-center justify-center flex-shrink-0`}>
+        <Icon size={16} />
+      </div>
+      <div>
+        <p className="text-2xl font-bold text-gray-900 leading-none">{count}</p>
+        <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-1">{label}</p>
+      </div>
     </div>
   );
 }
