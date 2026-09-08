@@ -79,14 +79,30 @@ export default function UserManagement() {
       return;
     }
 
+    // Role-specific manager validation: agents and dealers MUST have a manager;
+    // lead_creator does NOT require one.
+    const requiresManager = role === 'agent' || role === 'dealer';
+    if (requiresManager && !managerId) {
+      setFormError(
+        role === 'agent'
+          ? 'A Sales Manager must be assigned to every Sales Agent.'
+          : 'A Dealer Manager must be assigned to every Dealer.'
+      );
+      return;
+    }
+
     setSaving(true);
+
+    // Auto-generate fallback email if Supabase requires an email column.
+    const fallbackEmail = `${username.trim().toLowerCase().replace(/[^a-z0-9]/g, '')}@propertyfy.app`;
 
     const payload: Record<string, unknown> = {
       username: username.trim(),
       full_name: fullName.trim() || null,
       mobile: mobile.trim() || null,
+      email: fallbackEmail,
       role,
-      manager_id: (role === 'agent' || role === 'dealer') ? (managerId || null) : null,
+      manager_id: requiresManager ? managerId : null,
     };
 
     if (password) {
@@ -95,6 +111,8 @@ export default function UserManagement() {
 
     let result;
     if (editingUser) {
+      // Only set email on create, not on edit (preserve existing)
+      delete payload.email;
       result = await supabase.from('users').update(payload).eq('id', editingUser.id);
     } else {
       payload.password_hash = hashPassword(password);
@@ -402,40 +420,60 @@ export default function UserManagement() {
           {role === 'agent' && (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Assign Manager
+                Assign Manager <span className="text-red-500">*</span>
               </label>
               <select
                 value={managerId}
                 onChange={(e) => setManagerId(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-gray-900 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition"
+                className={`w-full px-3.5 py-2.5 rounded-xl border bg-white text-gray-900 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition ${
+                  !managerId ? 'border-red-300' : 'border-slate-200'
+                }`}
+                required
               >
-                <option value="">No manager assigned</option>
+                <option value="">Select a manager…</option>
                 {users.filter((u) => u.role === 'manager').map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.full_name || m.username}
                   </option>
                 ))}
               </select>
+              {!managerId && (
+                <p className="text-xs text-red-500 mt-1">A manager is required for Sales Agents.</p>
+              )}
             </div>
           )}
 
           {role === 'dealer' && (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Assign Dealer Manager
+                Assign Dealer Manager <span className="text-red-500">*</span>
               </label>
               <select
                 value={managerId}
                 onChange={(e) => setManagerId(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-gray-900 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition"
+                className={`w-full px-3.5 py-2.5 rounded-xl border bg-white text-gray-900 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition ${
+                  !managerId ? 'border-red-300' : 'border-slate-200'
+                }`}
+                required
               >
-                <option value="">No dealer manager assigned</option>
+                <option value="">Select a dealer manager…</option>
                 {users.filter((u) => u.role === 'dealer_manager').map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.full_name || m.username}
                   </option>
                 ))}
               </select>
+              {!managerId && (
+                <p className="text-xs text-red-500 mt-1">A dealer manager is required for Dealers.</p>
+              )}
+            </div>
+          )}
+
+          {role === 'lead_creator' && (
+            <div className="px-4 py-3 rounded-xl bg-teal-50 border border-teal-200">
+              <p className="text-sm text-teal-700">
+                Lead Creators do not require a manager assignment and can be created instantly.
+              </p>
             </div>
           )}
 

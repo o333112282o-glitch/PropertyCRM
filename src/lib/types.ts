@@ -6,6 +6,7 @@ export interface User {
   password_hash: string;
   role: UserRole;
   mobile: string | null;
+  email: string | null;
   full_name: string | null;
   manager_id: string | null;
   is_disabled: boolean;
