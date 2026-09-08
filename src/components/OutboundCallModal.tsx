@@ -81,7 +81,7 @@ export default function OutboundCallModal({ open, onClose, onLogged }: OutboundC
     const { error: logError } = await supabase.from('activity_logs').insert({
       lead_id: selectedLead?.id || null,
       user_id: user?.id || null,
-      action: 'Outbound Call',
+      action: 'Outbound Call Logged',
       detail: detailParts.join(' | '),
     });
 

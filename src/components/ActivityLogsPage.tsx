@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth, useVisibleAgentIds } from '@/lib/auth';
+import { useDebouncedRealtimeLeads } from '@/lib/useRealtime';
 import {
   User,
   SessionLog,
@@ -78,6 +79,9 @@ export default function ActivityLogsPage() {
     const timer = setInterval(fetchData, 60000);
     return () => clearInterval(timer);
   }, [fetchData]);
+
+  // Realtime: re-fetch immediately when activity_logs or leads change
+  useDebouncedRealtimeLeads(fetchData, 300);
 
   const teamMembers = useMemo(
     () => users.filter((u) => u.role === 'agent' || u.role === 'manager'),
