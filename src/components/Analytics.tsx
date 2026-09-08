@@ -16,6 +16,7 @@ import {
 } from '@/lib/types';
 import { formatCurrency, isCallAction, isWhatsAppAction, isUpdateAction } from '@/lib/utils';
 import DateFilter from '@/components/ui/DateFilter';
+import CallPerformanceAnalytics from '@/components/CallPerformanceAnalytics';
 
 interface ActivityLog {
   id: string;
@@ -431,6 +432,14 @@ export default function Analytics() {
           ))}
         </div>
       </div>
+
+      {/* Call Performance & Status Analytics — respects global filters */}
+      <CallPerformanceAnalytics
+        leads={filteredLeads}
+        activityLogs={activityLogs}
+        users={users}
+        agentName={agentName}
+      />
 
       {/* Stage distribution + Source breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">

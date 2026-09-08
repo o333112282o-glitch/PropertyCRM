@@ -9,8 +9,12 @@ import {
   getPresence,
   PRESENCE_COLORS,
   PRESENCE_LABELS,
+  DatePreset,
+  DateRange,
+  getPresetRange,
 } from '@/lib/types';
 import { formatDateTime, formatDate, timeAgo, isCallAction, isWhatsAppAction, isUpdateAction } from '@/lib/utils';
+import DateFilter from '@/components/ui/DateFilter';
 import {
   Clock,
   Phone,
@@ -18,14 +22,14 @@ import {
   Edit3,
   LogIn,
   LogOut,
-  Calendar,
   Users,
-  ClipboardList,
   Activity,
   TrendingUp,
+  Filter,
 } from 'lucide-react';
 
 type Tab = 'presence' | 'sessions' | 'activity';
+type ActivityTypeFilter = 'all' | 'calls' | 'whatsapp' | 'updates';
 
 export default function ActivityLogsPage() {
   const { isManager } = useAuth();
@@ -35,8 +39,20 @@ export default function ActivityLogsPage() {
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('presence');
-  const [dateFilter, setDateFilter] = useState<string>(new Date().toISOString().slice(0, 10));
+
+  // Advanced filters
+  const [datePreset, setDatePreset] = useState<DatePreset>('today');
+  const [customRange, setCustomRange] = useState<DateRange | null>(null);
   const [agentFilter, setAgentFilter] = useState<string>('all');
+  const [activityTypeFilter, setActivityTypeFilter] = useState<ActivityTypeFilter>('all');
+
+  const currentRange = useMemo((): DateRange => {
+    if (datePreset === 'custom' && customRange) return customRange;
+    if (datePreset === 'all') {
+      return { start: new Date(0), end: new Date() };
+    }
+    return getPresetRange(datePreset);
+  }, [datePreset, customRange]);
 
   const fetchData = useCallback(async () => {
     let visibleIds: string[] | null = null;
@@ -50,14 +66,14 @@ export default function ActivityLogsPage() {
     const allUsers = (userData as User[]) || [];
     setUsers(allUsers);
 
-    const dayStart = new Date(dateFilter + 'T00:00:00');
-    const dayEnd = new Date(dateFilter + 'T23:59:59');
+    const rangeStart = currentRange.start.toISOString();
+    const rangeEnd = currentRange.end.toISOString();
 
     let sessionQuery = supabase
       .from('session_logs')
       .select('*')
-      .gte('login_at', dayStart.toISOString())
-      .lte('login_at', dayEnd.toISOString());
+      .gte('login_at', rangeStart)
+      .lte('login_at', rangeEnd);
     if (visibleIds) sessionQuery = sessionQuery.in('user_id', visibleIds);
     const { data: sessionData } = await sessionQuery.order('login_at', { ascending: false });
     setSessions((sessionData as SessionLog[]) || []);
@@ -65,14 +81,14 @@ export default function ActivityLogsPage() {
     let actQuery = supabase
       .from('activity_logs')
       .select('*')
-      .gte('created_at', dayStart.toISOString())
-      .lte('created_at', dayEnd.toISOString());
+      .gte('created_at', rangeStart)
+      .lte('created_at', rangeEnd);
     if (visibleIds) actQuery = actQuery.in('user_id', visibleIds);
     const { data: actData } = await actQuery.order('created_at', { ascending: false });
     setActivityLogs((actData as ActivityLog[]) || []);
 
     setLoading(false);
-  }, [dateFilter, isManager, getVisibleAgentIds]);
+  }, [currentRange, isManager, getVisibleAgentIds]);
 
   useEffect(() => {
     fetchData();
@@ -80,13 +96,32 @@ export default function ActivityLogsPage() {
     return () => clearInterval(timer);
   }, [fetchData]);
 
-  // Realtime: re-fetch immediately when activity_logs or leads change
   useDebouncedRealtimeLeads(fetchData, 300);
 
   const teamMembers = useMemo(
     () => users.filter((u) => u.role === 'agent' || u.role === 'manager'),
     [users]
   );
+
+  // Apply agent filter to activity logs for all tabs
+  const agentFilteredActivity = useMemo(() => {
+    if (agentFilter === 'all') return activityLogs;
+    return activityLogs.filter((a) => a.user_id === agentFilter);
+  }, [activityLogs, agentFilter]);
+
+  // Apply activity type filter
+  const typeFilteredActivity = useMemo(() => {
+    if (activityTypeFilter === 'all') return agentFilteredActivity;
+    if (activityTypeFilter === 'calls') return agentFilteredActivity.filter((a) => isCallAction(a.action));
+    if (activityTypeFilter === 'whatsapp') return agentFilteredActivity.filter((a) => isWhatsAppAction(a.action));
+    if (activityTypeFilter === 'updates') return agentFilteredActivity.filter((a) => isUpdateAction(a.action));
+    return agentFilteredActivity;
+  }, [agentFilteredActivity, activityTypeFilter]);
+
+  const agentFilteredSessions = useMemo(() => {
+    if (agentFilter === 'all') return sessions;
+    return sessions.filter((s) => s.user_id === agentFilter);
+  }, [sessions, agentFilter]);
 
   const onlineCount = useMemo(
     () => teamMembers.filter((u) => getPresence(u.last_active_at) === 'online').length,
@@ -97,63 +132,59 @@ export default function ActivityLogsPage() {
     [teamMembers]
   );
 
-  const filteredSessions = useMemo(() => {
-    if (agentFilter === 'all') return sessions;
-    return sessions.filter((s) => s.user_id === agentFilter);
-  }, [sessions, agentFilter]);
-
-  const filteredActivity = useMemo(() => {
-    if (agentFilter === 'all') return activityLogs;
-    return activityLogs.filter((a) => a.user_id === agentFilter);
-  }, [activityLogs, agentFilter]);
-
   const userName = (id: string | null) => {
     if (!id) return 'System';
     const u = users.find((u) => u.id === id);
     return u?.full_name || u?.username || 'Unknown';
   };
 
-  // Aggregate per-agent stats for the day
+  // Aggregate per-agent stats — respects agent filter + activity type filter
   const agentStats = useMemo(() => {
-    return teamMembers.map((member) => {
-      const memberSessions = sessions.filter((s) => s.user_id === member.id);
-      const firstLogin = memberSessions.length > 0
-        ? memberSessions.sort((a, b) => new Date(a.login_at).getTime() - new Date(b.login_at).getTime())[0].login_at
-        : null;
-      const lastLogout = memberSessions
-        .filter((s) => s.logout_at)
-        .sort((a, b) => new Date(b.logout_at!).getTime() - new Date(a.logout_at!).getTime())[0]?.logout_at || null;
+    return teamMembers
+      .filter((m) => agentFilter === 'all' || m.id === agentFilter)
+      .map((member) => {
+        const memberSessions = sessions.filter((s) => s.user_id === member.id);
+        const firstLogin = memberSessions.length > 0
+          ? memberSessions.sort((a, b) => new Date(a.login_at).getTime() - new Date(b.login_at).getTime())[0].login_at
+          : null;
+        const lastLogout = memberSessions
+          .filter((s) => s.logout_at)
+          .sort((a, b) => new Date(b.logout_at!).getTime() - new Date(a.logout_at!).getTime())[0]?.logout_at || null;
 
-      let totalMs = 0;
-      for (const s of memberSessions) {
-        const start = new Date(s.login_at).getTime();
-        const end = s.logout_at ? new Date(s.logout_at).getTime() : Date.now();
-        totalMs += end - start;
-      }
-      const hours = Math.floor(totalMs / 3600000);
-      const mins = Math.floor((totalMs % 3600000) / 60000);
-      const activeHours = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+        let totalMs = 0;
+        for (const s of memberSessions) {
+          const start = new Date(s.login_at).getTime();
+          const end = s.logout_at ? new Date(s.logout_at).getTime() : Date.now();
+          totalMs += end - start;
+        }
+        const hours = Math.floor(totalMs / 3600000);
+        const mins = Math.floor((totalMs % 3600000) / 60000);
+        const activeHours = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
 
-      const memberActivity = activityLogs.filter((a) => a.user_id === member.id);
-      const callsLogged = memberActivity.filter((a) => isCallAction(a.action)).length;
-      const whatsappLogged = memberActivity.filter((a) => isWhatsAppAction(a.action)).length;
-      const leadsUpdated = memberActivity.filter((a) => isUpdateAction(a.action)).length;
+        let memberActivity = activityLogs.filter((a) => a.user_id === member.id);
+        if (activityTypeFilter === 'calls') memberActivity = memberActivity.filter((a) => isCallAction(a.action));
+        if (activityTypeFilter === 'whatsapp') memberActivity = memberActivity.filter((a) => isWhatsAppAction(a.action));
+        if (activityTypeFilter === 'updates') memberActivity = memberActivity.filter((a) => isUpdateAction(a.action));
 
-      const presence = getPresence(member.last_active_at);
+        const callsLogged = memberActivity.filter((a) => isCallAction(a.action)).length;
+        const whatsappLogged = memberActivity.filter((a) => isWhatsAppAction(a.action)).length;
+        const leadsUpdated = memberActivity.filter((a) => isUpdateAction(a.action)).length;
 
-      return {
-        member,
-        presence,
-        firstLogin,
-        lastLogout,
-        activeHours,
-        callsLogged,
-        whatsappLogged,
-        leadsUpdated,
-        totalActions: memberActivity.length,
-      };
-    });
-  }, [teamMembers, sessions, activityLogs]);
+        const presence = getPresence(member.last_active_at);
+
+        return {
+          member,
+          presence,
+          firstLogin,
+          lastLogout,
+          activeHours,
+          callsLogged,
+          whatsappLogged,
+          leadsUpdated,
+          totalActions: memberActivity.length,
+        };
+      });
+  }, [teamMembers, sessions, activityLogs, agentFilter, activityTypeFilter]);
 
   if (loading) {
     return (
@@ -184,30 +215,44 @@ export default function ActivityLogsPage() {
         <TabButton tab={tab} value="activity" onClick={setTab} icon={Activity} label="Audit Trail" />
       </div>
 
-      {/* Date + Agent filter (for sessions & audit tabs) */}
-      {tab !== 'presence' && (
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Calendar size={16} className="text-gray-400" />
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => { setDateFilter(e.target.value); setLoading(true); }}
-              className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-gray-900 text-sm font-medium focus:border-[#D4AF37] outline-none transition"
-            />
-          </div>
-          <select
-            value={agentFilter}
-            onChange={(e) => setAgentFilter(e.target.value)}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-gray-900 text-sm font-medium focus:border-[#D4AF37] outline-none transition"
-          >
-            <option value="all">All Members</option>
-            {teamMembers.map((m) => (
-              <option key={m.id} value={m.id}>{m.full_name || m.username}</option>
-            ))}
-          </select>
+      {/* Advanced Filter Bar — always visible */}
+      <div className="flex flex-wrap items-center gap-3 bg-white rounded-2xl border border-slate-200 p-3">
+        <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider">
+          <Filter size={14} />
+          <span>Filters</span>
         </div>
-      )}
+        <DateFilter
+          preset={datePreset}
+          range={customRange}
+          onPresetChange={(p) => { setDatePreset(p); setLoading(true); }}
+          onCustomRangeChange={(r) => { setCustomRange(r); setLoading(true); }}
+        />
+        <select
+          value={agentFilter}
+          onChange={(e) => setAgentFilter(e.target.value)}
+          className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-gray-900 text-sm font-medium focus:border-[#D4AF37] outline-none transition"
+        >
+          <option value="all">All Members</option>
+          {teamMembers.map((m) => (
+            <option key={m.id} value={m.id}>{m.full_name || m.username}</option>
+          ))}
+        </select>
+        <div className="flex gap-1 p-1 bg-slate-100 rounded-lg">
+          {(['all', 'calls', 'whatsapp', 'updates'] as ActivityTypeFilter[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setActivityTypeFilter(t)}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition capitalize ${
+                activityTypeFilter === t
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {t === 'all' ? 'All Activity' : t === 'calls' ? 'Calls' : t === 'whatsapp' ? 'WhatsApp' : 'Updates'}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* ── Live Status Tab ── */}
       {tab === 'presence' && (
@@ -219,7 +264,7 @@ export default function ActivityLogsPage() {
             <PresenceCard label="Offline" count={teamMembers.length - onlineCount - idleCount} color="slate" />
           </div>
 
-          {/* Team activity counters (live) */}
+          {/* Team activity counters (live, filter-aware) */}
           <div className="grid grid-cols-3 gap-3">
             <ActivityCounterCard
               label="Calls"
@@ -266,7 +311,7 @@ export default function ActivityLogsPage() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      {stat.firstLogin ? `Logged in ${timeAgo(stat.firstLogin)}` : 'Not logged in today'}
+                      {stat.firstLogin ? `Logged in ${timeAgo(stat.firstLogin)}` : 'Not logged in this period'}
                       {stat.member.last_active_at && ` · Active ${timeAgo(stat.member.last_active_at)}`}
                     </p>
                   </div>
@@ -313,7 +358,7 @@ export default function ActivityLogsPage() {
             {agentStats.length === 0 && (
               <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
                 <Users size={32} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-sm text-gray-400">No team members found</p>
+                <p className="text-sm text-gray-400">No team members found for this filter</p>
               </div>
             )}
           </div>
@@ -335,7 +380,7 @@ export default function ActivityLogsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredSessions.map((s) => {
+                {agentFilteredSessions.map((s) => {
                   const duration = s.logout_at
                     ? new Date(s.logout_at).getTime() - new Date(s.login_at).getTime()
                     : Date.now() - new Date(s.login_at).getTime();
@@ -364,8 +409,8 @@ export default function ActivityLogsPage() {
                     </tr>
                   );
                 })}
-                {filteredSessions.length === 0 && (
-                  <tr><td colSpan={4} className="text-center py-10 text-gray-400 text-sm">No sessions on {formatDate(dateFilter)}</td></tr>
+                {agentFilteredSessions.length === 0 && (
+                  <tr><td colSpan={4} className="text-center py-10 text-gray-400 text-sm">No sessions in this range</td></tr>
                 )}
               </tbody>
             </table>
@@ -373,7 +418,7 @@ export default function ActivityLogsPage() {
 
           {/* Mobile cards */}
           <div className="sm:hidden divide-y divide-slate-100">
-            {filteredSessions.map((s) => {
+            {agentFilteredSessions.map((s) => {
               const duration = s.logout_at
                 ? new Date(s.logout_at).getTime() - new Date(s.login_at).getTime()
                 : Date.now() - new Date(s.login_at).getTime();
@@ -399,8 +444,8 @@ export default function ActivityLogsPage() {
                 </div>
               );
             })}
-            {filteredSessions.length === 0 && (
-              <div className="text-center py-10 text-gray-400 text-sm">No sessions on {formatDate(dateFilter)}</div>
+            {agentFilteredSessions.length === 0 && (
+              <div className="text-center py-10 text-gray-400 text-sm">No sessions in this range</div>
             )}
           </div>
         </div>
@@ -409,14 +454,14 @@ export default function ActivityLogsPage() {
       {/* ── Audit Trail Tab ── */}
       {tab === 'activity' && (
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          {filteredActivity.length === 0 ? (
+          {typeFilteredActivity.length === 0 ? (
             <div className="text-center py-12">
               <Activity size={32} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-sm text-gray-400">No activity recorded on {formatDate(dateFilter)}</p>
+              <p className="text-sm text-gray-400">No activity matches these filters</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-50 max-h-[600px] overflow-y-auto">
-              {filteredActivity.map((log) => {
+              {typeFilteredActivity.map((log) => {
                 const isCall = log.action.toLowerCase().includes('call');
                 const isWhatsApp = log.action.toLowerCase().includes('whatsapp');
                 const isEdit = log.action.toLowerCase().includes('edit') || log.action.toLowerCase().includes('update');
