@@ -70,7 +70,7 @@ export default function Layout({ children, currentPage, onNavigate, onLeadClick 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 bg-white text-[#0F172A] fixed inset-y-0 left-0 z-30">
+      <aside className="hidden lg:flex flex-col w-64 bg-slate-100/50 border-r border-slate-200 text-[#0F172A] fixed inset-y-0 left-0 z-30">
         <div className="flex items-center gap-3 px-5 h-16 border-b border-slate-200 flex-shrink-0">
           <div className="w-9 h-9 rounded-xl bg-[#D4AF37] flex items-center justify-center">
             <Building2 size={20} className="text-[#1E293B]" />
